@@ -10,12 +10,6 @@ love . negotiation        # directo a una negociación
 love . --debug            # editor del engine: inspector del registry + cambio de escena
 ```
 
-## Ramas (una por entrega, cada una construida sobre la anterior)
-
-| Rama | Contenido |
-|---|---|
-| `main` | Base ECS (Registry + Scene) heredada del ejercicio de Breakout |
-| `entrega-1-ui` | Limpieza de Breakout + 3 sistemas de UI (esta rama) |
 
 ---
 
@@ -25,7 +19,7 @@ Esta primera entrega es deliberadamente básica: **texto y rectángulos sobre fo
 
 ## Limpieza
 
-Se eliminó todo el código de Breakout (commit `chore: remove all Breakout code`): los 11 systems de juego, el helper de colisión AABB, el README y el gif. Solo sobrevivió el núcleo ECS, que luego se actualizó con el engine del curso (`Game`, resources, debug overlay). Los sistemas del juego actual usan nombres y datos propios (`src/data/`).
+El proyecto ya no contiene nada de Breakout (systems de pelota, paleta y bloques, helper de colisión AABB, README y gif). Del ejercicio solo se conserva el núcleo ECS (`Registry` + `Scene`), actualizado con el engine del curso (`Game`, resources, debug overlay). Los sistemas del juego usan nombres y datos propios (`src/data/`).
 
 ## Los 3 sistemas de UI
 
