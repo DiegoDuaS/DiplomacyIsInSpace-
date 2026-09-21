@@ -85,7 +85,6 @@ Cada ronda el delegado pierde 1 de paciencia y gana hostilidad según su tempera
 |---|---|---|
 | ![inicio](docs/img/e1-negociacion-inicio.png) | ![jugada](docs/img/e1-negociacion-carta-jugada.png) | ![resultado](docs/img/e1-negociacion-resultado.png) |
 
-> El GIF/video corto para el portafolio se graba jugando: `love .` → PLAY → jugar varias cartas hasta ver el banner.
 
 ## Estructura
 
