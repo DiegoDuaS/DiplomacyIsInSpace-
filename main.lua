@@ -7,6 +7,8 @@ local attachDebugOverlay = require("src.debug.attach")
 
 function love.load(args)
     Game.registerScene("menu", require("src.scenes.MenuScene"))
+    Game.registerScene("prep", require("src.scenes.PrepScene"))
+    Game.registerScene("collection", require("src.scenes.CollectionScene"))
     Game.registerScene("negotiation", require("src.scenes.NegotiationScene"))
 
     local known, startScene = {}, "menu"

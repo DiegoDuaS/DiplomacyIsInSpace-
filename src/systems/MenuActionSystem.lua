@@ -1,5 +1,7 @@
 -- Gives each main-menu option its meaning: play, credits, quit.
 
+local RunState = require("src.state.RunState")
+
 local MenuActionSystem = { name = "menuAction" }
 
 function MenuActionSystem.update(scene, dt)
@@ -9,7 +11,8 @@ function MenuActionSystem.update(scene, dt)
 
     for _, pick in registry:each("menuPicked") do
         if pick.id == "play" then
-            registry:spawn({ switchRequest = { to = "negotiation" } })
+            RunState.reset() -- PLAY always starts a new run
+            registry:spawn({ switchRequest = { to = "prep" } })
         elseif pick.id == "credits" then
             credits.open, menu.active = true, false
         elseif pick.id == "quit" then

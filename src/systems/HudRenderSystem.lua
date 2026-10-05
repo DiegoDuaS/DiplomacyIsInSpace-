@@ -1,7 +1,8 @@
--- Draws the negotiation HUD: mood, meters, round, last play and the outcome banner.
+-- Draws the negotiation HUD: delegate, mood, meters, round, last play and the outcome banner.
 
 local Screen = require("src.Screen")
 local palette = require("src.data.palette")
+local aliens = require("src.data.aliens")
 local rules = require("src.data.negotiation_rules")
 local Panel = require("src.graphics.Panel")
 
@@ -65,7 +66,7 @@ local function drawMeter(label, y, shown, color, delta)
     end
 end
 
-local function drawBanner(outcome)
+local function drawBanner(outcome, run)
     local banner = BANNERS[outcome]
     local w, h = 420, 96
     local x, y = (Screen.w - w) / 2, 112
@@ -77,12 +78,14 @@ local function drawBanner(outcome)
     love.graphics.setColor(palette.cream)
     love.graphics.printf(banner.text, x + 12, y + 52, w - 24, "center")
     love.graphics.setColor(palette.amber)
-    love.graphics.printf("R  try again        M  main menu", x, y + 72, w, "center")
+    love.graphics.printf(run and "ENTER  next day        R  try again" or "R  try again        M  main menu",
+        x, y + 72, w, "center")
 end
 
 function HudRenderSystem.draw(scene)
     local registry = scene.registry
     local neg = registry:resource("negotiation")
+    local alien = aliens[neg.alien]
     local mood = moodOf(neg.hostility)
 
     for _, pos, size, hud in registry:each("position", "size", "hud") do
@@ -90,10 +93,13 @@ function HudRenderSystem.draw(scene)
 
         love.graphics.setFont(nameFont)
         love.graphics.setColor(palette.cream)
-        love.graphics.print("DELEGATE", pos.x + 16, pos.y + 12)
+        love.graphics.print(alien.name:upper(), pos.x + 16, pos.y + 12)
         love.graphics.setFont(smallFont)
+        love.graphics.setColor(palette.grey)
+        love.graphics.print(neg.run and ("DAY %d  -  %s"):format(neg.day, alien.court) or alien.court,
+            pos.x + 16, pos.y + 34)
         love.graphics.setColor(palette[mood.color])
-        love.graphics.print("MOOD " .. mood.label, pos.x + 16, pos.y + 40)
+        love.graphics.print("MOOD " .. mood.label, pos.x + 16, pos.y + 50)
 
         drawMeter("PATIENCE", pos.y + 14, hud.shown.patience, palette.silver, hud.delta.patience)
         drawMeter("HOSTILITY", pos.y + 42, hud.shown.hostility, palette.red, hud.delta.hostility)
@@ -109,7 +115,7 @@ function HudRenderSystem.draw(scene)
         end
     end
 
-    if neg.outcome then drawBanner(neg.outcome) end
+    if neg.outcome then drawBanner(neg.outcome, neg.run) end
     love.graphics.setColor(1, 1, 1)
 end
 

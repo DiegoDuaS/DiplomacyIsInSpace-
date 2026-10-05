@@ -28,7 +28,7 @@ function NegotiationSystem.update(scene, dt)
         for _, line in ipairs(CardEffect.lines(card)) do
             parts[#parts + 1] = line.text
         end
-        neg.message = ("%s %d: %s"):format(card.kind:upper(), card.power, table.concat(parts, ", "))
+        neg.message = card.name .. ": " .. table.concat(parts, ", ")
 
         hand.cards[request.slot] = hand.deck[hand.deckIndex]
         hand.deckIndex = hand.deckIndex % #hand.deck + 1

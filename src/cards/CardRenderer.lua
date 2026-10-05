@@ -1,4 +1,4 @@
--- Draws one card at a position: its kind, its power and what it does to the meters.
+-- Draws one card at a position: its kind, power, name and what it does to the meters.
 -- Screens decide which cards go where.
 
 local palette = require("src.data.palette")
@@ -9,13 +9,14 @@ local CardRenderer = {}
 
 CardRenderer.W, CardRenderer.H = 100, 140
 
-local labelFont, numberFont, lineFont
+local labelFont, numberFont, nameFont, lineFont
 
 local function loadFonts()
     if labelFont then return end
     labelFont = love.graphics.newFont(11, "mono")
     numberFont = love.graphics.newFont(20, "mono")
-    lineFont = love.graphics.newFont(12, "mono")
+    nameFont = love.graphics.newFont(12, "mono")
+    lineFont = love.graphics.newFont(11, "mono")
 end
 
 function CardRenderer.draw(card, x, y)
@@ -33,11 +34,14 @@ function CardRenderer.draw(card, x, y)
     love.graphics.setFont(numberFont)
     love.graphics.printf(tostring(card.power), x, y + 4, w - 8, "right")
 
+    love.graphics.setFont(nameFont)
+    love.graphics.printf(card.name, x + 6, y + 38, w - 12, "center")
+
     love.graphics.setFont(lineFont)
     for i, line in ipairs(CardEffect.lines(card)) do
         local good = (line.meter == "patience") == (line.delta > 0)
         love.graphics.setColor(good and palette.light or palette.red)
-        love.graphics.printf(line.text, x + 4, y + 52 + (i - 1) * 24, w - 8, "center")
+        love.graphics.printf(line.text, x + 4, y + 88 + (i - 1) * 16, w - 8, "center")
     end
     love.graphics.setColor(1, 1, 1)
 end
