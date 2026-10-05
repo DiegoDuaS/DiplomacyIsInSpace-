@@ -1,90 +1,143 @@
 # Diplomacy Is In Space
 
-Deckbuilder de diplomacia espacial hecho en [LÖVE](https://love2d.org) 11.5 sobre un ECS escrito a mano (engine del curso CC3096).
+Deckbuilder de diplomacia espacial hecho en [LÖVE](https://love2d.org) 11.5.
 
-Eres el único operador de una estación que recibe una cumbre con razas alienígenas. En vez de ligar, juegas **cartas de negociación** para manejar la **paciencia** y la **hostilidad** de cada delegado y evitar una guerra espacial. Cada día llega una raza distinta y tu mazo mejora entre rondas.
+Eres el único operador de una estación que recibe una cumbre con razas alienígenas. Tu juegas **cartas de negociación** para manejar la **paciencia** y la **hostilidad** de cada delegado y evitar una guerra espacial. Cada día llega una raza distinta y tu mazo mejora entre rondas.
 
 ```sh
-love .                    # menú principal
-love . negotiation        # directo a una negociación
-love . --debug            # editor del engine: inspector del registry + cambio de escena
+love .                    # menú principal -> PLAY
 ```
-
 
 ---
 
-# Entrega 1 — Sistemas de UI
+# Entrega 2 — Progression Cycle
 
-Esta primera entrega es deliberadamente básica: **texto y rectángulos sobre fondo negro**. Todavía no hay nombres de cartas ni de delegados, ni fondo, ni figuras; eso llega en las siguientes entregas.
+Esta entrega sigue el mismo estilo de la primera (texto y rectángulos sobre fondo negro) y le agrega el ciclo del día alrededor de la negociación. Aparecen los nombres de las cartas y de las delegaciones, porque ahora el juego cuenta a quién vas a ver y por qué.
 
-## Limpieza
+## El ciclo
 
-El proyecto ya no contiene nada de Breakout (systems de pelota, paleta y bloques, helper de colisión AABB, README y gif). Del ejercicio solo se conserva el núcleo ECS (`Registry` + `Scene`), actualizado con el engine del curso (`Game`, resources, debug overlay). Los sistemas del juego usan nombres y datos propios (`src/data/`).
+```
+DÍA N: la delegación de una raza te espera en su tribunal
+   │
+   ▼
+[Estación] gastas 3 "time slots" en acciones que entrenan tus habilidades
+   │          Etiquette Workshop → +2 TACT   Study Treaties → +2 LOGIC   Standoff Drills → +2 RESOLVE
+   ▼
+[Briefing] recibes un paquete de 5 cartas generado desde tus habilidades → colección persistente
+   │
+   ▼
+[Corte] defiendes tu caso ante el delegado (la negociación), con una mano sacada de tu colección
+   │        paz / guerra / abandono según cómo manejes su paciencia y su hostilidad
+   ▼
+Fin del día → DÍA N+1 (otra raza); la colección conserva todo
+```
 
-## Los 3 sistemas de UI
+Lo que haces en la estación determina las cartas del briefing, y esas cartas son las que juegas en la corte: entrenar mucho **TACT** llena tus paquetes de cartas TACT, que son las que bajan la hostilidad del delegado.
 
-Cada UI es un grupo de systems atómicos (una responsabilidad por system) que cubren **Setup → Update → Render**:
+## Parte 1 — Pantalla de progresión ([`PrepScene`](src/scenes/PrepScene.lua))
 
-- **Setup**: la escena crea las entidades de la UI (posición, opciones, valores iniciales, referencia al estado) y los systems cargan sus fuentes en `setup(scene)` / spawnean su entidad.
-- **Update**: los systems de input convierten teclas en eventos (`menuPicked`, `cardPlayRequested`) y otros systems reaccionan al evento y al estado.
-- **Render**: systems de solo lectura que dibujan en coordenadas de pantalla (la UI no depende de ninguna cámara del mundo).
-
-### 1. Menú principal — [`MenuScene`](src/scenes/MenuScene.lua)
-
-| Fase | Dónde |
+| Requisito | Cómo se cumple |
 |---|---|
-| Setup | `MenuScene` spawnea la entidad `menu` (opciones PLAY / CREDITS / QUIT, cursor) y el resource `credits`; `MenuRenderSystem.setup` carga las fuentes |
-| Update | [`MenuInputSystem`](src/systems/MenuInputSystem.lua) (teclas → cursor, evento `menuPicked`) y [`MenuActionSystem`](src/systems/MenuActionSystem.lua) (`menuPicked` → cambiar de escena, abrir créditos, salir) |
-| Render | [`MenuRenderSystem`](src/systems/MenuRenderSystem.lua) (título, menú con cursor parpadeante, panel de créditos) |
+| 2+ acciones | 3 acciones ([`actions.lua`](src/data/actions.lua)) + una entrada gratuita "VIEW COLLECTION" |
+| 2+ estadísticas | 3 habilidades: `tact`, `logic`, `resolve` (barras a la izquierda) |
+| Momento de la partida | "DAY N" arriba, la delegación del día y los **time slots** restantes |
+| Feedback tras decidir | Línea de sabor + `[+2 TACT]` en el textbox con efecto typewriter; las barras suben |
+| Condición para avanzar | Al gastar el último slot, tras 3 s ([`ProgressionGateSystem`](src/systems/ProgressionGateSystem.lua)) se pasa al briefing |
 
-**Conexión con el juego:** es la puerta de entrada; PLAY cambia de escena mediante un `switchRequest` que atiende el `Game`, sin que ninguna escena llame a otra directamente.
+Los números (3 slots, +2 por acción, umbral de las barras, espera) están en [`progression_rules.lua`](src/data/progression_rules.lua).
 
-### 2. HUD de negociación — [`NegotiationScene`](src/scenes/NegotiationScene.lua)
+| Tras una acción | Último slot | Día 2 (otra delegación) |
+|---|---|---|
+| ![acción](docs/img/e2-prep-accion.png) | ![último](docs/img/e2-prep-ultima-accion.png) | ![día 2](docs/img/e2-prep-dia2.png) |
 
-| Fase | Dónde |
+## Parte 2 — Adquisición y colección ([`CollectionScene`](src/scenes/CollectionScene.lua))
+
+Una sola escena con dos entradas:
+
+- `payload = { acquire = true }` (desde el briefing): genera el paquete del día, lo agrega a la colección, marca las cartas nuevas con **NEW** y, al continuar, va a la corte.
+- sin payload (opción "VIEW COLLECTION" en la estación): solo revisión; al volver, la colección queda intacta.
+
+Navegación con flechas / HOME / END por páginas de 6 cartas; el panel izquierdo inspecciona la carta seleccionada (tipo, poder, efecto sobre paciencia/hostilidad, descripción y el día en que se recibió).
+
+| Paquete recibido | Navegación | Revisión posterior (sin perder cartas) |
+|---|---|---|
+| ![paquete](docs/img/e2-coleccion-paquete.png) | ![nav](docs/img/e2-coleccion-navegar.png) | ![revisión](docs/img/e2-coleccion-revision.png) |
+
+### Regla de generación ([`CardGenerator`](src/generation/CardGenerator.lua))
+
+1. El **tipo** de cada carta se sortea con probabilidad proporcional a la habilidad correspondiente. Con TACT 20 / LOGIC 5 / RESOLVE 10, salen ≈ 57 % / 14 % / 29 %.
+2. El **poder** se sortea entre el 50 % y el 100 % de la habilidad de ese tipo (mínimo 1): entrenar sube el techo *y* el piso.
+3. Una habilidad en 0 nunca produce su tipo.
+
+La regla es una función pura con RNG inyectado; cada paquete usa un RNG local sembrado con `runState.packSeed`, así que cualquier paquete se puede reproducir.
+
+### Cierre del ciclo: la corte ([`NegotiationScene`](src/scenes/NegotiationScene.lua) con `payload.run`)
+
+Al continuar desde el briefing se entra a la negociación de la Entrega 1, ahora como caso del día: el delegado es el de ese día (`aliens.ofDay`), la **mano se reparte desde tu colección** (barajada por día) y al terminar, ENTER lanza `dayEnded` y [`EndDaySystem`](src/systems/EndDaySystem.lua) pasa al día siguiente. R reintenta el caso. Sin `payload.run` (`love . negotiation`) sigue siendo la negociación suelta de la Entrega 1 con el mazo inicial.
+
+| La corte: mano sacada de tu colección | Resultado y paso al día siguiente |
 |---|---|
-| Setup | [`HudSystem.setup`](src/systems/HudSystem.lua) spawnea la entidad `hud` (valores mostrados, cambios flotantes) leyendo el estado inicial; `HudRenderSystem.setup` carga fuentes |
-| Update | `HudSystem.update` hace que las barras persigan el estado real (`negotiation`) con easing y muestra los cambios flotantes al recibir `negotiationChanged` |
-| Render | [`HudRenderSystem`](src/systems/HudRenderSystem.lua): humor del delegado (CALM/WARY/TENSE/FURIOUS), barras de **paciencia** y **hostilidad**, ronda actual, última jugada y banner de resultado (paz / guerra / abandono) |
+| ![corte](docs/img/e2-corte-inicio.png) | ![resultado](docs/img/e2-corte-resultado.png) |
 
-**Conexión con el juego:** paciencia y hostilidad son *la* mecánica central. El HUD lee el resource `negotiation` que escribe [`NegotiationSystem`](src/systems/NegotiationSystem.lua) y nunca lo modifica.
+## Arquitectura
 
-### 3. Mano de cartas — [`NegotiationScene`](src/scenes/NegotiationScene.lua)
+### Estado compartido — [`RunState`](src/state/RunState.lua)
 
-| Fase | Dónde |
-|---|---|
-| Setup | `NegotiationScene` spawnea la entidad `hand` (4 cartas del mazo inicial, cursor); `HandRenderSystem.setup` carga fuentes |
-| Update | [`HandInputSystem`](src/systems/HandInputSystem.lua) (←/→ mueve el cursor, ENTER emite `cardPlayRequested`); `NegotiationSystem` aplica el efecto de la carta y repone la mano |
-| Render | [`HandRenderSystem`](src/systems/HandRenderSystem.lua) coloca las cartas y levanta la seleccionada; cada carta la dibuja [`CardRenderer`](src/cards/CardRenderer.lua) (tipo, poder y efecto; aún sin nombre ni símbolo) |
+Una sola tabla de **datos simples** que todas las escenas leen y escriben; vive en un módulo, no en una escena, por eso sobrevive al cambio de escena:
 
-**Conexión con el juego:** es el deckbuilder. Cada carta tiene un tipo (TACT, LOGIC, RESOLVE) y un poder; su efecto sobre los medidores lo calcula la función pura [`CardEffect`](src/cards/CardEffect.lua):
+```lua
+{ day = 1, actionsLeft = 3,
+  stats = { tact = 1, logic = 1, resolve = 1 },
+  collection = { { kind = "tact", name = "Warm Greeting", power = 4, day = 1 }, ... },
+  packSeed = 1 }
+```
 
-| Tipo | Efecto por punto de poder |
-|---|---|
-| TACT | hostilidad −1 |
-| LOGIC | paciencia +1 |
-| RESOLVE | hostilidad −2, paciencia −1 |
+No guarda imágenes, funciones, systems, escenas ni objetos gráficos ([`tests/run_state.lua`](tests/run_state.lua) lo verifica recorriendo la tabla). Cada escena la expone como resource `runState` para que el inspector del debug overlay la muestre en vivo. Lo que es solo de una escena (cursor, typewriter, gate, página) vive en resources de la escena y muere con ella. Guardar en disco es opcional y no se implementó.
 
-Cada ronda el delegado pierde 1 de paciencia y gana hostilidad según su temperamento ([`aliens.lua`](src/data/aliens.lua)). Sobrevives 8 rondas → paz; hostilidad al máximo → guerra; paciencia en 0 → el delegado se va.
+### Systems (una responsabilidad cada uno, comunicados por eventos)
+
+**Estación** (`PrepScene`):
+
+| System | Hooks | Responsabilidad |
+|---|---|---|
+| [`MenuInputSystem`](src/systems/MenuInputSystem.lua) | update | teclas → cursor + evento `menuPicked` |
+| [`ActionSystem`](src/systems/ActionSystem.lua) | update | `menuPicked` → habilidades y slots; emite `actionPerformed` / `actionRefused` |
+| [`PrepNavigationSystem`](src/systems/PrepNavigationSystem.lua) | update | `menuPicked` de "collection" → cambio de escena |
+| [`FeedbackSystem`](src/systems/FeedbackSystem.lua) | update | `actionPerformed` → texto |
+| [`TextboxSystem`](src/systems/TextboxSystem.lua) | update | typewriter |
+| [`ProgressionGateSystem`](src/systems/ProgressionGateSystem.lua) | setup, update | 0 slots → pasar al briefing |
+| [`DayRenderSystem`](src/systems/DayRenderSystem.lua), [`StatsRenderSystem`](src/systems/StatsRenderSystem.lua), [`ActionMenuRenderSystem`](src/systems/ActionMenuRenderSystem.lua), [`TextboxRenderSystem`](src/systems/TextboxRenderSystem.lua) | setup (fuentes), draw | presentación pura |
+
+**Briefing / colección** (`CollectionScene`):
+
+| System | Hooks | Responsabilidad |
+|---|---|---|
+| [`CollectionInputSystem`](src/systems/CollectionInputSystem.lua) | update | teclas → `collectionMoveRequested`, `collectionJumpRequested`, `continueRequested` |
+| [`PackGenerationSystem`](src/systems/PackGenerationSystem.lua) | update | `packRequested` → llama al generador y agrega a la colección |
+| [`CollectionSelectionSystem`](src/systems/CollectionSelectionSystem.lua) | update | dueño del cursor y la página |
+| [`CollectionExitSystem`](src/systems/CollectionExitSystem.lua) | update | qué significa "continuar" (ir a la corte o volver a la estación) |
+| [`CollectionChromeRenderSystem`](src/systems/CollectionChromeRenderSystem.lua), [`CollectionGridRenderSystem`](src/systems/CollectionGridRenderSystem.lua), [`CardDetailRenderSystem`](src/systems/CardDetailRenderSystem.lua) | setup (fuentes), draw | marco, rejilla de cartas, inspector |
+
+**Corte** (`NegotiationScene` con `run`): los de la Entrega 1 más [`EndDaySystem`](src/systems/EndDaySystem.lua), único escritor del ciclo de días (`dayEnded` → día+1, slots y vuelta a la estación). `OutcomeInputSystem` corre antes de `NegotiationSystem` para que la tecla que decide el resultado no lo descarte en el mismo frame.
+
+Separación lógica / datos / presentación: la regla de cartas (`CardGenerator`, `CardEffect`) es pura y no conoce la UI; los datos están en `src/data/`; los render systems solo leen. El input nunca genera cartas ni cambia de escena: solo emite eventos. Cada system implementa únicamente los hooks que usa.
 
 ## Controles
 
 | Pantalla | Teclas |
 |---|---|
-| Menú | ↑ ↓ mover, ENTER elegir, BACKSPACE cerrar créditos |
-| Negociación | ← → elegir carta, ENTER jugarla; al terminar: R reintentar, M menú |
+| Estación | ↑ ↓ elegir, ENTER hacer la acción |
+| Colección | ← → ↑ ↓ mover, HOME / END, ENTER (ir a la corte) o ENTER / BACKSPACE (volver) |
+| Corte | ← → elegir carta, ENTER jugarla; al terminar ENTER día siguiente, R reintentar |
 | Global | ESC salir |
 
-## Evidencia visual
+> El GIF para el portafolio: `love .` → PLAY → 3 acciones → paquete → ENTER (corte) → jugar cartas hasta el resultado → ENTER (día 2) → VIEW COLLECTION.
 
-| Menú | Créditos |
-|---|---|
-| ![menú](docs/img/e1-menu.png) | ![créditos](docs/img/e1-menu-creditos.png) |
+---
 
-| Negociación (inicio) | Carta jugada (barras animadas) | Resultado |
-|---|---|---|
-| ![inicio](docs/img/e1-negociacion-inicio.png) | ![jugada](docs/img/e1-negociacion-carta-jugada.png) | ![resultado](docs/img/e1-negociacion-resultado.png) |
+# Entrega 1 — Sistemas de UI (resumen)
 
+Menú principal, HUD de negociación (paciencia / hostilidad) y mano de cartas, con Setup → Update → Render cada uno. En esta rama la negociación es la corte del ciclo de días. Detalle en el README de la Entrega 1 y capturas en `docs/img/e1-*.png`.
 
 ## Estructura
 
@@ -92,10 +145,13 @@ Cada ronda el delegado pierde 1 de paciencia y gana hostilidad según su tempera
 main.lua                    bootstrap: registra escenas y reenvía callbacks
 src/Game.lua                escenas, cambio diferido (switchRequest), keyPressed como evento
 src/ecs/                    Registry + Scene (engine del curso)
-src/scenes/                 MenuScene, NegotiationScene
+src/scenes/                 MenuScene, PrepScene, CollectionScene, NegotiationScene
 src/systems/                un archivo por system
+src/state/                  RunState (estado compartido, solo datos)
+src/generation/             CardGenerator (regla pura de cartas)
 src/cards/                  CardEffect (regla pura) y CardRenderer (dibujo)
 src/graphics/               Panel
-src/data/                   paleta, delegados, tipos de carta, reglas, mazo inicial
+src/data/                   paleta, delegaciones, acciones, tipos y nombres de carta, reglas, mazo inicial
 src/debug/ lib/             debug overlay del curso (inspector del registry)
+tests/                      pruebas en Lua puro
 ```
