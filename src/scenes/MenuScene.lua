@@ -4,6 +4,7 @@ local Scene = require("src.ecs.Scene")
 
 local MenuInputSystem = require("src.systems.MenuInputSystem")
 local MenuActionSystem = require("src.systems.MenuActionSystem")
+local StarfieldRenderSystem = require("src.systems.StarfieldRenderSystem")
 local MenuRenderSystem = require("src.systems.MenuRenderSystem")
 
 return function(payload)
@@ -29,6 +30,7 @@ return function(payload)
 
     scene:addSystem(MenuInputSystem)
     scene:addSystem(MenuActionSystem)
+    scene:addSystem(StarfieldRenderSystem)
     scene:addSystem(MenuRenderSystem)
 
     return scene

@@ -41,7 +41,7 @@ function CollectionChromeRenderSystem.draw(scene)
 
     love.graphics.setColor(palette.grey)
     love.graphics.printf(
-        pack.acquiring and "ARROWS browse    ENTER go to the court"
+        pack.acquiring and "ARROWS browse    ENTER fly to the delegation"
             or "ARROWS browse    ENTER / BACKSPACE back to the station",
         0, Screen.h - 26, Screen.w, "center")
     love.graphics.setColor(1, 1, 1)

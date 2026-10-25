@@ -14,6 +14,8 @@ local NegotiationSystem = require("src.systems.NegotiationSystem")
 local OutcomeInputSystem = require("src.systems.OutcomeInputSystem")
 local EndDaySystem = require("src.systems.EndDaySystem")
 local HudSystem = require("src.systems.HudSystem")
+local StarfieldRenderSystem = require("src.systems.StarfieldRenderSystem")
+local AlienRenderSystem = require("src.systems.AlienRenderSystem")
 local HandRenderSystem = require("src.systems.HandRenderSystem")
 local HudRenderSystem = require("src.systems.HudRenderSystem")
 
@@ -66,6 +68,8 @@ return function(payload)
     scene:addSystem(NegotiationSystem)
     if run then scene:addSystem(EndDaySystem) end
     scene:addSystem(HudSystem)
+    scene:addSystem(StarfieldRenderSystem)
+    scene:addSystem(AlienRenderSystem)
     scene:addSystem(HandRenderSystem)
     scene:addSystem(HudRenderSystem)
 

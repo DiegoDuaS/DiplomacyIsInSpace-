@@ -6,138 +6,122 @@ Eres el único operador de una estación que recibe una cumbre con razas aliení
 
 ```sh
 love .                    # menú principal -> PLAY
+love . map                # directo al mapa
 ```
 
 ---
 
-# Entrega 2 — Progression Cycle
+# Entrega 3 — Escena de mapa y exploración
 
-Esta entrega sigue el mismo estilo de la primera (texto y rectángulos sobre fondo negro) y le agrega el ciclo del día alrededor de la negociación. Aparecen los nombres de las cartas y de las delegaciones, porque ahora el juego cuenta a quién vas a ver y por qué.
+Esta entrega agrega el mapa al ciclo del día y, con él, aparece lo visual que faltaba: el fondo de estrellas, los planetas y el retrato del delegado en la corte. Sigue en la paleta de grises con un acento ámbar; todo son formas planas hasta que haya assets.
 
-## El ciclo
+## El ciclo del día
 
 ```
-DÍA N: la delegación de una raza te espera en su tribunal
-   │
-   ▼
-[Estación] gastas 3 "time slots" en acciones que entrenan tus habilidades
-   │          Etiquette Workshop → +2 TACT   Study Treaties → +2 LOGIC   Standoff Drills → +2 RESOLVE
-   ▼
-[Briefing] recibes un paquete de 5 cartas generado desde tus habilidades → colección persistente
-   │
-   ▼
-[Corte] defiendes tu caso ante el delegado (la negociación), con una mano sacada de tu colección
-   │        paz / guerra / abandono según cómo manejes su paciencia y su hostilidad
-   ▼
-Fin del día → DÍA N+1 (otra raza); la colección conserva todo
+Estación  →  Briefing  →  MAPA  →  Corte  →  Estación, día N+1
+(entrenas)   (cartas)     vuelas al planeta   defiendes tu caso
+                          de la delegación    con tu colección
 ```
 
-Lo que haces en la estación determina las cartas del briefing, y esas cartas son las que juegas en la corte: entrenar mucho **TACT** llena tus paquetes de cartas TACT, que son las que bajan la hostilidad del delegado.
+## Descripción
 
-## Parte 1 — Pantalla de progresión ([`PrepScene`](src/scenes/PrepScene.lua))
+El mapa es **el sistema Concord**: el operador pilota un transbordador diplomático entre la estación y los mundos natales de cada delegación. Cada planeta es la sede del sistema judicial de su raza (los Kelari tienen el *Tribunal of Tides*, los Vorn la *Court of Blades*, los Ixili la *Assembly of Many*), así que viajar es ir al tribunal donde se negocia. Solo el planeta de la delegación del día está abierto; los demás dicen `CLOSED TODAY`.
 
-| Requisito | Cómo se cumple |
+## Diseño del mapa
+
+El mapa es una cuadrícula de tiles escrita como texto: 80 × 48 celdas de 16 px (1280 × 768 px) en [`src/data/map.lua`](src/data/map.lua) (`.` espacio libre, `#` asteroide; los asteroides son grupos de celdas de formas irregulares). Es más grande que la pantalla (640 × 400), así que **la cámara sigue a la nave** y hay un minimapa para ubicarse. La estación (4×4 celdas) y los planetas (6×6) son bloques de celdas sólidas pintados encima. [`TileGrid`](src/world/TileGrid.lua) guarda el terreno de cada celda. Los tiles son formas planas hasta que haya arte; no hay autotiling todavía.
+
+| Punto de interés | Dónde | Qué es |
+|---|---|---|
+| **Concord Station** | centro | Punto de partida; el HUD recuerda cuál es la corte de hoy |
+| **Thalassa** (Kelari) | arriba a la izquierda | Tribunal of Tides (abierto el día 1) |
+| **Krag** (Vorn) | arriba a la derecha | Court of Blades (día 2) |
+| **Hexa** (Ixili) | abajo a la izquierda | Assembly of Many (día 3) |
+
+Hay 46 grupos de asteroides repartidos por el mapa, y la nave pasa entre ellos por pasillos angostos. Cada planeta lleva su nombre, raza y tribunal; el de la delegación de hoy se marca `[TODAY]`.
+
+| Inicio, junto a la estación | Thalassa (planeta del día, abierto) | Krag (cerrado hoy) |
+|---|---|---|
+| ![estación](docs/img/e3-mapa-estacion.png) | ![thalassa](docs/img/e3-mapa-thalassa.png) | ![krag](docs/img/e3-mapa-krag.png) |
+
+| La cámara sigue a la nave (el minimapa muestra la vista actual) |
+|---|
+| ![cámara](docs/img/e3-mapa-camara.png) |
+
+## Implementación
+
+### Setup → Update → Render
+
+- **Setup**: [`MapScene`](src/scenes/MapScene.lua) crea una sola entidad `tilemap` (la cuadrícula, no una entidad por celda), una entidad por planeta/estación (`position`, `poi`) y la nave (`position`, `moveIntent`, `velocity`, `collider`, `ship`) en un punto libre junto a la estación, más los resources `map` (velocidad, lugar cercano) y `camera` (esquina superior izquierda de la vista).
+- **Update** (el orden ES el orden del frame):
+
+  | System | Responsabilidad |
+  |---|---|
+  | [`MapInputSystem`](src/systems/MapInputSystem.lua) | teclas sostenidas → `moveIntent`; ENTER → evento `interactRequested` |
+  | [`MovementSystem`](src/systems/MovementSystem.lua) | `moveIntent` → `velocity` → `position` (px/s × `dt`, diagonal normalizada) |
+  | [`TileCollisionSystem`](src/systems/TileCollisionSystem.lua) | saca a la nave de las celdas sólidas |
+  | [`MapBoundsSystem`](src/systems/MapBoundsSystem.lua) | mantiene la nave dentro del mapa |
+  | [`ShipFacingSystem`](src/systems/ShipFacingSystem.lua) | rumbo de la nave y si el motor está encendido |
+  | [`CameraSystem`](src/systems/CameraSystem.lua) | la vista sigue a la nave y se detiene en los bordes del mundo |
+  | [`ProximitySystem`](src/systems/ProximitySystem.lua) | qué lugar tiene la nave cerca → `map.nearby` |
+  | [`CourtEntrySystem`](src/systems/CourtEntrySystem.lua) | ENTER junto al planeta del día → cambio a la corte |
+
+- **Render**: [`StarfieldRenderSystem`](src/systems/StarfieldRenderSystem.lua) (estrellas con parallax) → [`CameraBeginSystem`](src/systems/CameraBeginSystem.lua) → **mundo**: [`TilemapRenderSystem`](src/systems/TilemapRenderSystem.lua) (solo las celdas visibles; asteroides, estación y planetas como tiles planos), [`PoiRenderSystem`](src/systems/PoiRenderSystem.lua) (anillo de cercanía, nombres, marcador de hoy), [`ShipRenderSystem`](src/systems/ShipRenderSystem.lua) → [`CameraEndSystem`](src/systems/CameraEndSystem.lua) → **pantalla**: [`MapHudRenderSystem`](src/systems/MapHudRenderSystem.lua) (día, lugar cercano y qué hacer ahí) y [`MinimapRenderSystem`](src/systems/MinimapRenderSystem.lua). Los dos systems de cámara solo abren y cierran `push/translate/pop`: en la lista se ve qué es mundo y qué es UI, y por eso el HUD no se mueve con la cámara.
+
+### Movimiento
+Input continuo con `love.keyboard.isDown` (WASD / flechas), porque una tecla mantenida no cabe en un evento `keyPressed`. Velocidad en px/s integrada con `dt` (170 px/s). [`Movement`](src/world/Movement.lua) (módulo puro) normaliza la diagonal y decide el rumbo por eje dominante.
+
+### Límites
+`MapBoundsSystem` recorta la posición al rectángulo del mundo, con la mitad del hitbox de la nave de margen. La cámara también se recorta, así que nunca muestra nada fuera del mapa.
+
+### Colisiones
+Una celda vacía es `nil` y cualquier terreno es sólido. [`Collision`](src/world/Collision.lua) (funciones puras) revisa las celdas que toca el hitbox de la nave y resuelve **eje por eje**, así que la nave *se desliza* por una pared en vez de pegarse. Asteroides, estación y planetas son celdas, por lo que una sola regla cubre todo. Demostrado en [`tests/collision.lua`](tests/collision.lua).
+
+| Colisión con un asteroide | Límite del mapa (borde izquierdo) |
 |---|---|
-| 2+ acciones | 3 acciones ([`actions.lua`](src/data/actions.lua)) + una entrada gratuita "VIEW COLLECTION" |
-| 2+ estadísticas | 3 habilidades: `tact`, `logic`, `resolve` (barras a la izquierda) |
-| Momento de la partida | "DAY N" arriba, la delegación del día y los **time slots** restantes |
-| Feedback tras decidir | Línea de sabor + `[+2 TACT]` en el textbox con efecto typewriter; las barras suben |
-| Condición para avanzar | Al gastar el último slot, tras 3 s ([`ProgressionGateSystem`](src/systems/ProgressionGateSystem.lua)) se pasa al briefing |
+| ![asteroides](docs/img/e3-mapa-asteroides.png) | ![borde](docs/img/e3-mapa-borde.png) |
 
-Los números (3 slots, +2 por acción, umbral de las barras, espera) están en [`progression_rules.lua`](src/data/progression_rules.lua).
+### Puntos de interés
+Cada uno es una entidad con `poi` (id, tipo, nombre, radio y rango). `ProximitySystem` calcula un único dato (`map.nearby`) que consumen el HUD, el anillo de acento y la entrada a la corte; así nadie mide distancias por su cuenta.
 
-| Tras una acción | Último slot | Día 2 (otra delegación) |
-|---|---|---|
-| ![acción](docs/img/e2-prep-accion.png) | ![último](docs/img/e2-prep-ultima-accion.png) | ![día 2](docs/img/e2-prep-dia2.png) |
+### Transición hacia / desde la escena
+- **Entrar**: en el briefing, ENTER → `switchRequest` a `map` ([`CollectionExitSystem`](src/systems/CollectionExitSystem.lua)). También `love . map`.
+- **Salir**: volar al planeta de la delegación del día y ENTER → [`CourtEntrySystem`](src/systems/CourtEntrySystem.lua) cambia a la corte (la negociación con la mano sacada de tu colección). Al terminarla, ENTER pasa al día siguiente. El estado (`RunState`) es compartido, así que colección y habilidades siguen ahí.
 
-## Parte 2 — Adquisición y colección ([`CollectionScene`](src/scenes/CollectionScene.lua))
-
-Una sola escena con dos entradas:
-
-- `payload = { acquire = true }` (desde el briefing): genera el paquete del día, lo agrega a la colección, marca las cartas nuevas con **NEW** y, al continuar, va a la corte.
-- sin payload (opción "VIEW COLLECTION" en la estación): solo revisión; al volver, la colección queda intacta.
-
-Navegación con flechas / HOME / END por páginas de 6 cartas; el panel izquierdo inspecciona la carta seleccionada (tipo, poder, efecto sobre paciencia/hostilidad, descripción y el día en que se recibió).
-
-| Paquete recibido | Navegación | Revisión posterior (sin perder cartas) |
-|---|---|---|
-| ![paquete](docs/img/e2-coleccion-paquete.png) | ![nav](docs/img/e2-coleccion-navegar.png) | ![revisión](docs/img/e2-coleccion-revision.png) |
-
-### Regla de generación ([`CardGenerator`](src/generation/CardGenerator.lua))
-
-1. El **tipo** de cada carta se sortea con probabilidad proporcional a la habilidad correspondiente. Con TACT 20 / LOGIC 5 / RESOLVE 10, salen ≈ 57 % / 14 % / 29 %.
-2. El **poder** se sortea entre el 50 % y el 100 % de la habilidad de ese tipo (mínimo 1): entrenar sube el techo *y* el piso.
-3. Una habilidad en 0 nunca produce su tipo.
-
-La regla es una función pura con RNG inyectado; cada paquete usa un RNG local sembrado con `runState.packSeed`, así que cualquier paquete se puede reproducir.
-
-### Cierre del ciclo: la corte ([`NegotiationScene`](src/scenes/NegotiationScene.lua) con `payload.run`)
-
-Al continuar desde el briefing se entra a la negociación de la Entrega 1, ahora como caso del día: el delegado es el de ese día (`aliens.ofDay`), la **mano se reparte desde tu colección** (barajada por día) y al terminar, ENTER lanza `dayEnded` y [`EndDaySystem`](src/systems/EndDaySystem.lua) pasa al día siguiente. R reintenta el caso. Sin `payload.run` (`love . negotiation`) sigue siendo la negociación suelta de la Entrega 1 con el mazo inicial.
-
-| La corte: mano sacada de tu colección | Resultado y paso al día siguiente |
-|---|---|
-| ![corte](docs/img/e2-corte-inicio.png) | ![resultado](docs/img/e2-corte-resultado.png) |
-
-## Arquitectura
-
-### Estado compartido — [`RunState`](src/state/RunState.lua)
-
-Una sola tabla de **datos simples** que todas las escenas leen y escriben; vive en un módulo, no en una escena, por eso sobrevive al cambio de escena:
-
-```lua
-{ day = 1, actionsLeft = 3,
-  stats = { tact = 1, logic = 1, resolve = 1 },
-  collection = { { kind = "tact", name = "Warm Greeting", power = 4, day = 1 }, ... },
-  packSeed = 1 }
-```
-
-No guarda imágenes, funciones, systems, escenas ni objetos gráficos ([`tests/run_state.lua`](tests/run_state.lua) lo verifica recorriendo la tabla). Cada escena la expone como resource `runState` para que el inspector del debug overlay la muestre en vivo. Lo que es solo de una escena (cursor, typewriter, gate, página) vive en resources de la escena y muere con ella. Guardar en disco es opcional y no se implementó.
-
-### Systems (una responsabilidad cada uno, comunicados por eventos)
-
-**Estación** (`PrepScene`):
-
-| System | Hooks | Responsabilidad |
-|---|---|---|
-| [`MenuInputSystem`](src/systems/MenuInputSystem.lua) | update | teclas → cursor + evento `menuPicked` |
-| [`ActionSystem`](src/systems/ActionSystem.lua) | update | `menuPicked` → habilidades y slots; emite `actionPerformed` / `actionRefused` |
-| [`PrepNavigationSystem`](src/systems/PrepNavigationSystem.lua) | update | `menuPicked` de "collection" → cambio de escena |
-| [`FeedbackSystem`](src/systems/FeedbackSystem.lua) | update | `actionPerformed` → texto |
-| [`TextboxSystem`](src/systems/TextboxSystem.lua) | update | typewriter |
-| [`ProgressionGateSystem`](src/systems/ProgressionGateSystem.lua) | setup, update | 0 slots → pasar al briefing |
-| [`DayRenderSystem`](src/systems/DayRenderSystem.lua), [`StatsRenderSystem`](src/systems/StatsRenderSystem.lua), [`ActionMenuRenderSystem`](src/systems/ActionMenuRenderSystem.lua), [`TextboxRenderSystem`](src/systems/TextboxRenderSystem.lua) | setup (fuentes), draw | presentación pura |
-
-**Briefing / colección** (`CollectionScene`):
-
-| System | Hooks | Responsabilidad |
-|---|---|---|
-| [`CollectionInputSystem`](src/systems/CollectionInputSystem.lua) | update | teclas → `collectionMoveRequested`, `collectionJumpRequested`, `continueRequested` |
-| [`PackGenerationSystem`](src/systems/PackGenerationSystem.lua) | update | `packRequested` → llama al generador y agrega a la colección |
-| [`CollectionSelectionSystem`](src/systems/CollectionSelectionSystem.lua) | update | dueño del cursor y la página |
-| [`CollectionExitSystem`](src/systems/CollectionExitSystem.lua) | update | qué significa "continuar" (ir a la corte o volver a la estación) |
-| [`CollectionChromeRenderSystem`](src/systems/CollectionChromeRenderSystem.lua), [`CollectionGridRenderSystem`](src/systems/CollectionGridRenderSystem.lua), [`CardDetailRenderSystem`](src/systems/CardDetailRenderSystem.lua) | setup (fuentes), draw | marco, rejilla de cartas, inspector |
-
-**Corte** (`NegotiationScene` con `run`): los de la Entrega 1 más [`EndDaySystem`](src/systems/EndDaySystem.lua), único escritor del ciclo de días (`dayEnded` → día+1, slots y vuelta a la estación). `OutcomeInputSystem` corre antes de `NegotiationSystem` para que la tecla que decide el resultado no lo descarte en el mismo frame.
-
-Separación lógica / datos / presentación: la regla de cartas (`CardGenerator`, `CardEffect`) es pura y no conoce la UI; los datos están en `src/data/`; los render systems solo leen. El input nunca genera cartas ni cambia de escena: solo emite eventos. Cada system implementa únicamente los hooks que usa.
+| La corte, entrando desde el mapa |
+|---|
+| ![corte](docs/img/e3-corte.png) |
 
 ## Controles
 
 | Pantalla | Teclas |
 |---|---|
+| Mapa | WASD / flechas volar, ENTER entrar a la corte (junto al planeta del día) |
 | Estación | ↑ ↓ elegir, ENTER hacer la acción |
-| Colección | ← → ↑ ↓ mover, HOME / END, ENTER (ir a la corte) o ENTER / BACKSPACE (volver) |
+| Colección | flechas mover, ENTER ir al mapa / volver |
 | Corte | ← → elegir carta, ENTER jugarla; al terminar ENTER día siguiente, R reintentar |
 | Global | ESC salir |
 
-> El GIF para el portafolio: `love .` → PLAY → 3 acciones → paquete → ENTER (corte) → jugar cartas hasta el resultado → ENTER (día 2) → VIEW COLLECTION.
+> El GIF para el portafolio: `love .` → PLAY → 3 acciones → ENTER en la colección (entra al mapa) → volar a un asteroide y a un planeta cerrado → entrar a la corte del día → jugar hasta el resultado → ENTER (día 2).
+
+## Pruebas
+
+```sh
+lua tests/collision.lua
+lua tests/generation.lua
+lua tests/run_state.lua
+```
+
+## Código fuente
+
+Escena [`MapScene`](src/scenes/MapScene.lua) · datos [`map.lua`](src/data/map.lua) · lógica pura [`TileGrid`](src/world/TileGrid.lua), [`Collision`](src/world/Collision.lua), [`Movement`](src/world/Movement.lua) · pruebas [`tests/collision.lua`](tests/collision.lua) · systems en [`src/systems/`](src/systems/).
 
 ---
 
-# Entrega 1 — Sistemas de UI (resumen)
+# Entregas anteriores
 
-Menú principal, HUD de negociación (paciencia / hostilidad) y mano de cartas, con Setup → Update → Render cada uno. En esta rama la negociación es la corte del ciclo de días. Detalle en el README de la Entrega 1 y capturas en `docs/img/e1-*.png`.
+- **Entrega 2 — ciclo de progresión:** estación (3 acciones → habilidades), briefing (paquete de cartas generado desde las habilidades), colección persistente, `RunState` compartido y la corte como cierre del día. Regla de generación en [`CardGenerator`](src/generation/CardGenerator.lua). Capturas en `docs/img/e2-*.png`.
+- **Entrega 1 — UI:** menú principal, HUD de negociación (paciencia / hostilidad) y mano de cartas, con Setup → Update → Render cada uno. Capturas en `docs/img/e1-*.png`.
 
 ## Estructura
 
@@ -145,13 +129,14 @@ Menú principal, HUD de negociación (paciencia / hostilidad) y mano de cartas, 
 main.lua                    bootstrap: registra escenas y reenvía callbacks
 src/Game.lua                escenas, cambio diferido (switchRequest), keyPressed como evento
 src/ecs/                    Registry + Scene (engine del curso)
-src/scenes/                 MenuScene, PrepScene, CollectionScene, NegotiationScene
+src/scenes/                 Menu, Prep, Collection, Map, Negotiation
 src/systems/                un archivo por system
 src/state/                  RunState (estado compartido, solo datos)
 src/generation/             CardGenerator (regla pura de cartas)
+src/world/                  TileGrid, Collision y Movement (lógica pura del mapa)
 src/cards/                  CardEffect (regla pura) y CardRenderer (dibujo)
 src/graphics/               Panel
-src/data/                   paleta, delegaciones, acciones, tipos y nombres de carta, reglas, mazo inicial
+src/data/                   paleta, delegaciones, mapa, acciones, cartas, reglas
 src/debug/ lib/             debug overlay del curso (inspector del registry)
 tests/                      pruebas en Lua puro
 ```
