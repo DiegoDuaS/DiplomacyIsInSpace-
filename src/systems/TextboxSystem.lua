@@ -4,10 +4,8 @@
 local TextboxSystem = { name = "textbox" }
 
 function TextboxSystem.update(scene, dt)
-    for _, textbox in scene.registry:each("textbox") do
-        textbox.visibleChars = math.min(
-            textbox.visibleChars + textbox.speed * dt,
-            #textbox.text)
+    for _, box in scene.registry:each("textbox") do
+        box.visibleChars = math.min(#box.text, box.visibleChars + box.speed * dt)
     end
 end
 

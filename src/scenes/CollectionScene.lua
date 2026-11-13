@@ -5,12 +5,12 @@ local RunState = require("src.state.RunState")
 
 local CollectionInputSystem = require("src.systems.CollectionInputSystem")
 local PackGenerationSystem = require("src.systems.PackGenerationSystem")
-local CollectionSelectionSystem = require("src.systems.CollectionSelectionSystem")
+local CollectionTreeSystem = require("src.systems.CollectionTreeSystem")
 local CollectionExitSystem = require("src.systems.CollectionExitSystem")
 local EndDaySystem = require("src.systems.EndDaySystem")
-local CollectionChromeRenderSystem = require("src.systems.CollectionChromeRenderSystem")
-local CollectionGridRenderSystem = require("src.systems.CollectionGridRenderSystem")
-local CardDetailRenderSystem = require("src.systems.CardDetailRenderSystem")
+local CollectionHeaderRenderSystem = require("src.systems.CollectionHeaderRenderSystem")
+local CollectionListRenderSystem = require("src.systems.CollectionListRenderSystem")
+local CardInspectorRenderSystem = require("src.systems.CardInspectorRenderSystem")
 
 return function(payload)
     local scene = Scene.new("collection")
@@ -19,11 +19,13 @@ return function(payload)
 
     scene.registry:setResource("runState", runState)
 
+    -- the file browser: which folders are open, what is selected, how far it is scrolled
     scene.registry:setResource("collectionView", {
-        selected = #runState.collection > 0 and 1 or 0,
-        page = 1,
-        columns = 3,
-        pageSize = 6,
+        open = { tact = true, logic = true, resolve = true },
+        selection = { folder = "tact" },
+        cursor = 1,
+        top = 1,
+        visible = 10,
     })
     scene.registry:setResource("pack", { acquiring = acquiring, first = nil, last = nil })
 
@@ -33,12 +35,12 @@ return function(payload)
 
     scene:addSystem(CollectionInputSystem)
     scene:addSystem(PackGenerationSystem)
-    scene:addSystem(CollectionSelectionSystem)
+    scene:addSystem(CollectionTreeSystem)
     scene:addSystem(CollectionExitSystem)
     scene:addSystem(EndDaySystem)
-    scene:addSystem(CollectionChromeRenderSystem)
-    scene:addSystem(CollectionGridRenderSystem)
-    scene:addSystem(CardDetailRenderSystem)
+    scene:addSystem(CollectionHeaderRenderSystem)
+    scene:addSystem(CollectionListRenderSystem)
+    scene:addSystem(CardInspectorRenderSystem)
 
     return scene
 end

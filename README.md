@@ -6,7 +6,10 @@ Eres el único operador de una estación que recibe una cumbre con razas aliení
 
 ```sh
 love .                    # menú principal -> PLAY
+love . --debug            # overlay de depuración sobre el juego
 ```
+
+Con `--debug` aparece un panel sobre el juego: **F1** mostrar/ocultar, **F2/F3** escena, **F4/F5** entidad, **F6/F7** componente, **RePág/AvPág** campo, **-/=** editar el valor, **;/'** elegir y apagar un system, **F9** pausa, **F10** un frame.
 
 ---
 
@@ -55,11 +58,11 @@ Una sola escena con dos entradas:
 - `payload = { acquire = true }` (desde el briefing): genera el paquete del día, lo agrega a la colección, marca las cartas nuevas con **NEW** y, al continuar, va a la corte.
 - sin payload (opción "VIEW COLLECTION" en la estación): solo revisión; al volver, la colección queda intacta.
 
-Navegación con flechas / HOME / END por páginas de 6 cartas; el panel izquierdo inspecciona la carta seleccionada (tipo, poder, efecto sobre paciencia/hostilidad, descripción y el día en que se recibió).
+La colección se ve como un explorador de archivos: una **carpeta por tipo de carta** (TACT, LOGIC, RESOLVE) y un **archivo por carta**, ordenados por nombre. ↑ ↓ recorren la lista (con scroll), ← → cierran y abren la carpeta, HOME / END saltan al principio o al final. El panel de abajo abre la carta seleccionada (tipo, poder, efecto sobre paciencia/hostilidad, descripción y el día en que se recibió).
 
-| Paquete recibido | Navegación | Revisión posterior (sin perder cartas) |
-|---|---|---|
-| ![paquete](docs/img/e2-coleccion-paquete.png) | ![nav](docs/img/e2-coleccion-navegar.png) | ![revisión](docs/img/e2-coleccion-revision.png) |
+| Paquete recibido | Navegación (scroll) | Carpeta cerrada | Revisión posterior |
+|---|---|---|---|
+| ![paquete](docs/img/e2-coleccion-paquete.png) | ![nav](docs/img/e2-coleccion-navegar.png) | ![carpeta](docs/img/e2-coleccion-carpeta.png) | ![revisión](docs/img/e2-coleccion-revision.png) |
 
 ### Regla de generación ([`CardGenerator`](src/generation/CardGenerator.lua))
 
@@ -90,7 +93,7 @@ Una sola tabla de **datos simples** que todas las escenas leen y escriben; vive 
   packSeed = 1 }
 ```
 
-No guarda imágenes, funciones, systems, escenas ni objetos gráficos ([`tests/run_state.lua`](tests/run_state.lua) lo verifica recorriendo la tabla). Cada escena la expone como resource `runState` para que el inspector del debug overlay la muestre en vivo. Lo que es solo de una escena (cursor, typewriter, gate, página) vive en resources de la escena y muere con ella. Guardar en disco es opcional y no se implementó.
+No guarda imágenes, funciones, systems, escenas ni objetos gráficos ([`tests/run_state.lua`](tests/run_state.lua) lo verifica recorriendo la tabla). Cada escena la expone como resource `runState` para que el inspector del debug overlay la muestre en vivo. Lo que es solo de una escena (cursor, typewriter, gate, carpetas abiertas) vive en resources de la escena y muere con ella. Guardar en disco es opcional y no se implementó.
 
 ### Systems (una responsabilidad cada uno, comunicados por eventos)
 
@@ -110,11 +113,11 @@ No guarda imágenes, funciones, systems, escenas ni objetos gráficos ([`tests/r
 
 | System | Hooks | Responsabilidad |
 |---|---|---|
-| [`CollectionInputSystem`](src/systems/CollectionInputSystem.lua) | update | teclas → `collectionMoveRequested`, `collectionJumpRequested`, `continueRequested` |
+| [`CollectionInputSystem`](src/systems/CollectionInputSystem.lua) | update | teclas → `collectionMoveRequested`, `collectionFoldRequested`, `collectionJumpRequested`, `continueRequested` |
 | [`PackGenerationSystem`](src/systems/PackGenerationSystem.lua) | update | `packRequested` → llama al generador y agrega a la colección |
-| [`CollectionSelectionSystem`](src/systems/CollectionSelectionSystem.lua) | update | dueño del cursor y la página |
+| [`CollectionTreeSystem`](src/systems/CollectionTreeSystem.lua) | setup, update | dueño del árbol: arma las filas (carpetas y cartas), el cursor, el plegado y el scroll |
 | [`CollectionExitSystem`](src/systems/CollectionExitSystem.lua) | update | qué significa "continuar" (ir a la corte o volver a la estación) |
-| [`CollectionChromeRenderSystem`](src/systems/CollectionChromeRenderSystem.lua), [`CollectionGridRenderSystem`](src/systems/CollectionGridRenderSystem.lua), [`CardDetailRenderSystem`](src/systems/CardDetailRenderSystem.lua) | setup (fuentes), draw | marco, rejilla de cartas, inspector |
+| [`CollectionHeaderRenderSystem`](src/systems/CollectionHeaderRenderSystem.lua), [`CollectionListRenderSystem`](src/systems/CollectionListRenderSystem.lua), [`CardInspectorRenderSystem`](src/systems/CardInspectorRenderSystem.lua) | setup (fuentes), draw | título arriba, lista de carpetas y archivos, panel de la carta abierta |
 
 **Corte** (`NegotiationScene` con `run`): los de la Entrega 1 más [`EndDaySystem`](src/systems/EndDaySystem.lua), único escritor del ciclo de días (`dayEnded` → día+1, slots y vuelta a la estación). `OutcomeInputSystem` corre antes de `NegotiationSystem` para que la tecla que decide el resultado no lo descarte en el mismo frame.
 
@@ -125,7 +128,7 @@ Separación lógica / datos / presentación: la regla de cartas (`CardGenerator`
 | Pantalla | Teclas |
 |---|---|
 | Estación | ↑ ↓ elegir, ENTER hacer la acción |
-| Colección | ← → ↑ ↓ mover, HOME / END, ENTER (ir a la corte) o ENTER / BACKSPACE (volver) |
+| Colección | ↑ ↓ mover, ← → cerrar/abrir carpeta, HOME / END, ENTER (ir a la corte) o ENTER / BACKSPACE (volver) |
 | Corte | ← → elegir carta, ENTER jugarla; al terminar ENTER día siguiente, R reintentar |
 | Global | ESC salir |
 
@@ -142,7 +145,7 @@ Menú principal, HUD de negociación (paciencia / hostilidad) y mano de cartas, 
 ```
 main.lua                    bootstrap: registra escenas y reenvía callbacks
 src/Game.lua                escenas, cambio diferido (switchRequest), keyPressed como evento
-src/ecs/                    Registry + Scene (engine del curso)
+src/ecs/                    Registry + Scene (ECS propio)
 src/scenes/                 MenuScene, PrepScene, CollectionScene, NegotiationScene
 src/systems/                un archivo por system
 src/state/                  RunState (estado compartido, solo datos)
@@ -150,6 +153,6 @@ src/generation/             CardGenerator (regla pura de cartas)
 src/cards/                  CardEffect (regla pura) y CardRenderer (dibujo)
 src/graphics/               Panel
 src/data/                   paleta, delegaciones, acciones, tipos y nombres de carta, reglas, mazo inicial
-src/debug/ lib/             debug overlay del curso (inspector del registry)
+src/debug/                  debug overlay propio (inspector del registry, escenas, pausa)
 tests/                      pruebas en Lua puro
 ```
