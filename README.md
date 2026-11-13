@@ -2,7 +2,7 @@
 
 Deckbuilder de diplomacia espacial hecho en [LÖVE](https://love2d.org) 11.5 sobre un ECS escrito a mano (engine del curso CC3096).
 
-Eres el único operador de una estación que recibe una cumbre con razas alienígenas. En vez de ligar, juegas **cartas de negociación** para manejar la **paciencia** y la **hostilidad** de cada delegado y evitar una guerra espacial. Cada día llega una raza distinta y tu mazo mejora entre rondas.
+Eres el único operador de una estación que recibe una cumbre con razas alienígenas: en vez de ligar, juegas cartas de negociación para manejar la paciencia y la hostilidad de cada delegado y evitar una guerra espacial.
 
 ```sh
 love .                    # menú principal
@@ -16,10 +16,6 @@ love . --debug            # editor del engine: inspector del registry + cambio d
 # Entrega 1 — Sistemas de UI
 
 Esta primera entrega es deliberadamente básica: **texto y rectángulos sobre fondo negro**. Todavía no hay nombres de cartas ni de delegados, ni fondo, ni figuras; eso llega en las siguientes entregas.
-
-## Limpieza
-
-El proyecto ya no contiene nada de Breakout (systems de pelota, paleta y bloques, helper de colisión AABB, README y gif). Del ejercicio solo se conserva el núcleo ECS (`Registry` + `Scene`), actualizado con el engine del curso (`Game`, resources, debug overlay). Los sistemas del juego usan nombres y datos propios (`src/data/`).
 
 ## Los 3 sistemas de UI
 
