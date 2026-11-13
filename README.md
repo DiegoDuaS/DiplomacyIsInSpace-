@@ -12,8 +12,6 @@ love .                    # menú principal -> PLAY
 
 # Entrega 2 — Progression Cycle
 
-Esta entrega sigue el mismo estilo de la primera (texto y rectángulos sobre fondo negro) y le agrega el ciclo del día alrededor de la negociación. Aparecen los nombres de las cartas y de las delegaciones, porque ahora el juego cuenta a quién vas a ver y por qué.
-
 ## El ciclo
 
 ```
