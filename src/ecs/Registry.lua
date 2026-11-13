@@ -1,40 +1,18 @@
--- The Registry: where all components live, indexed by entity.
---
---   Entity    = just a number. It has no data, no behavior, no class.
---               It only "exists" as a key inside the component stores.
---   Component = plain data attached to an entity ({x = 10, y = 20}).
---
--- Storage layout: one table per component TYPE, indexed by entity:
---
---   registry.components = {
---       position = { [1] = {x=30, y=230}, [3] = {x=473, y=263} },
---       velocity = { [3] = {vx=280, vy=-40} },
---       ...
---   }
---
--- So "which components does entity 3 have?" is answered by looking up
--- key 3 in each store, and "every entity with a velocity" is a single
--- table — the data-oriented layout from week 1, in Lua. The name (and
--- the API) mirrors entt's registry, which we used in the C++ course.
---
--- Note the registry holds NO logic. Logic lives in Systems, which
--- belong to the Scene.
+-- Entities are numbers; components are plain tables kept in one store per component name:
+--   registry.stores.position[entity] = { x = 1, y = 2 }
+-- The registry holds data only. Logic lives in systems.
 
 local Registry = {}
 Registry.__index = Registry
 
 function Registry.new()
-    return setmetatable({
-        nextEntity = 1,
-        components = {}, -- component name -> { [entity] = data }
-    }, Registry)
+    return setmetatable({ nextId = 1, stores = {} }, Registry)
 end
 
--- Create an entity with an initial set of components:
---   local ballEntity = registry:spawn({ position = {x=0,y=0}, ball = {} })
+-- Create an entity from a { name = data } table and return its id.
 function Registry:spawn(components)
-    local entity = self.nextEntity
-    self.nextEntity = entity + 1
+    local entity = self.nextId
+    self.nextId = entity + 1
     for name, data in pairs(components) do
         self:add(entity, name, data)
     end
@@ -42,126 +20,113 @@ function Registry:spawn(components)
 end
 
 function Registry:add(entity, name, data)
-    local store = self.components[name]
+    local store = self.stores[name]
     if not store then
         store = {}
-        self.components[name] = store
+        self.stores[name] = store
     end
     store[entity] = data
 end
 
 function Registry:get(entity, name)
-    local store = self.components[name]
-    return store and store[entity]
+    local store = self.stores[name]
+    if store then return store[entity] end
 end
 
--- Destroy an entity: forget it in every component store. That's all
--- destruction is — there is no object to delete.
+-- Destroying an entity just removes it from every store.
 function Registry:destroy(entity)
-    for _, store in pairs(self.components) do
+    for _, store in pairs(self.stores) do
         store[entity] = nil
     end
 end
 
--- All entities that have ALL of the given components, in a stable order:
---   for _, entity in ipairs(registry:query("position", "velocity")) do ... end
+local function storesFor(registry, names)
+    local list = {}
+    for i, name in ipairs(names) do
+        list[i] = registry.stores[name]
+        if not list[i] then return nil end
+    end
+    return list
+end
+
+-- Sorted list of the entities that have every named component.
 function Registry:query(...)
     local names = { ... }
-    local first = self.components[names[1]] or {}
-    local result = {}
-    for entity in pairs(first) do
-        local ok = true
-        for i = 2, #names do
-            local store = self.components[names[i]]
-            if not store or store[entity] == nil then
-                ok = false
+    local list = storesFor(self, names)
+    local found = {}
+    if not list then return found end
+
+    for entity in pairs(list[1]) do
+        local complete = true
+        for i = 2, #list do
+            if list[i][entity] == nil then
+                complete = false
                 break
             end
         end
-        if ok then
-            result[#result + 1] = entity
-        end
+        if complete then found[#found + 1] = entity end
     end
-    table.sort(result) -- pairs() order is undefined; keep runs deterministic
-    return result
+    table.sort(found)
+    return found
 end
 
--- Iterate entities AND their components in one go:
---   for entity, pos, vel in registry:each("position", "velocity") do ... end
---
--- This is a closure-based iterator (the same protocol pairs/ipairs use):
--- the generic for calls the returned function once per step, and stops
--- when it returns nil. The entity list is a snapshot from query(), so
--- spawning/destroying inside the loop is safe; entities destroyed
--- mid-loop are skipped.
+-- for entity, a, b in registry:each("a", "b") do ... end
+-- Works on a snapshot, so spawning or destroying inside the loop is safe.
 function Registry:each(...)
     local names = { ... }
-    local entities = self:query(...)
-    local i = 0
+    local ids = self:query(...)
+    local n, position = #names, 0
+
     return function()
-        while true do
-            i = i + 1
-            local entity = entities[i]
-            if not entity then return nil end
-            local values, alive = {}, true
-            for k, name in ipairs(names) do
-                values[k] = self.components[name][entity]
-                if values[k] == nil then -- destroyed since query(): skip it
-                    alive = false
-                    break
-                end
+        while position < #ids do
+            position = position + 1
+            local entity = ids[position]
+            local values, complete = {}, true
+            for i = 1, n do
+                values[i] = self.stores[names[i]][entity]
+                if values[i] == nil then complete = false end
             end
-            if alive then
-                -- LÖVE is LuaJIT (Lua 5.1): `unpack`, not `table.unpack`.
-                -- Explicit bounds, because values could have nil holes.
-                return entity, unpack(values, 1, #names)
+            if complete then
+                return entity, unpack(values, 1, n) -- LuaJIT: unpack, not table.unpack
             end
         end
     end
 end
 
--- Every entity that exists, in a stable order. Nothing in the GAME needs
--- this — systems always know which components they want. It exists for
--- TOOLS: the debug inspector asks "what's here?" without knowing any
--- component names up front. (This is reflection, engine-flavored.)
+-- Tools only (debug overlay): every entity, and the components of one.
 function Registry:entities()
-    local seen = {}
-    local result = {}
-    for _, store in pairs(self.components) do
-        for entity in pairs(store) do
-            if not seen[entity] then
-                seen[entity] = true
-                result[#result + 1] = entity
-            end
-        end
+    local present = {}
+    for _, store in pairs(self.stores) do
+        for entity in pairs(store) do present[entity] = true end
     end
-    table.sort(result)
-    return result
+    local list = {}
+    for entity in pairs(present) do list[#list + 1] = entity end
+    table.sort(list)
+    return list
 end
 
--- The names of every component an entity has, sorted. Also for tools.
 function Registry:componentsOf(entity)
-    local result = {}
-    for name, store in pairs(self.components) do
-        if store[entity] ~= nil then
-            result[#result + 1] = name
-        end
+    local names = {}
+    for name, store in pairs(self.stores) do
+        if store[entity] ~= nil then names[#names + 1] = name end
     end
-    table.sort(result)
-    return result
+    table.sort(names)
+    return names
 end
 
--- RESOURCES: singleton values that aren't really "things in the world" —
--- the match score, settings, the run state. We just hit the limit of
--- "everything is an entity": a score has no position, is never queried
--- alongside anything, and there is exactly one. Real engines give this
--- its own concept (Bevy calls them resources); ours is a thin veneer
--- over a hidden singleton entity, so the debug inspector sees resources
--- for free, like any other component.
+-- Resources: one-off values (run state, map settings) stored as a single-entity component.
+function Registry:first(name)
+    local store = self.stores[name]
+    if store then
+        local entity, data = next(store)
+        return entity, data
+    end
+end
+
 function Registry:setResource(name, value)
     local entity = self:first(name)
     if entity then
-        self.components[name][entity] = value
+        self.stores[name][entity] = value
     else
         self:spawn({ [name] = value })
     end
@@ -170,17 +135,6 @@ end
 function Registry:resource(name)
     local _, value = self:first(name)
     return value
-end
-
--- For "singleton" components that exist on exactly one entity (match
--- state, settings...). Returns entity, data.
-function Registry:first(name)
-    local store = self.components[name]
-    if store then
-        for entity, data in pairs(store) do
-            return entity, data
-        end
-    end
 end
 
 return Registry

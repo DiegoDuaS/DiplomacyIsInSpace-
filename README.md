@@ -7,8 +7,10 @@ Eres el único operador de una estación que recibe una cumbre con razas aliení
 ```sh
 love .                    # menú principal
 love . negotiation        # directo a una negociación
-love . --debug            # editor del engine: inspector del registry + cambio de escena
+love . --debug            # overlay de depuración: inspector del registry, cambio de escena, pausa
 ```
+
+Con `--debug` aparece un panel sobre el juego: **F1** mostrar/ocultar, **F2/F3** escena, **F4/F5** entidad, **F6/F7** componente, **RePág/AvPág** campo, **-/=** editar el valor, **;/'** elegir y apagar un system, **F9** pausa, **F10** un frame.
 
 
 ---
@@ -87,11 +89,11 @@ Cada ronda el delegado pierde 1 de paciencia y gana hostilidad según su tempera
 ```
 main.lua                    bootstrap: registra escenas y reenvía callbacks
 src/Game.lua                escenas, cambio diferido (switchRequest), keyPressed como evento
-src/ecs/                    Registry + Scene (engine del curso)
+src/ecs/                    Registry + Scene (ECS propio)
 src/scenes/                 MenuScene, NegotiationScene
 src/systems/                un archivo por system
 src/cards/                  CardEffect (regla pura) y CardRenderer (dibujo)
 src/graphics/               Panel
 src/data/                   paleta, delegados, tipos de carta, reglas, mazo inicial
-src/debug/ lib/             debug overlay del curso (inspector del registry)
+src/debug/                  debug overlay propio (inspector del registry, escenas, pausa)
 ```
