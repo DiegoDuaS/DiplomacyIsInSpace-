@@ -7,7 +7,10 @@ Eres el único operador de una estación que recibe una cumbre con razas aliení
 ```sh
 love .                    # menú principal -> PLAY
 love . map                # directo al mapa
+love . --debug            # overlay de depuración sobre el juego
 ```
+
+Con `--debug` aparece un panel sobre el juego: **F1** mostrar/ocultar, **F2/F3** escena, **F4/F5** entidad, **F6/F7** componente, **RePág/AvPág** campo, **-/=** editar el valor, **;/'** elegir y apagar un system, **F9** pausa, **F10** un frame.
 
 ---
 
@@ -98,7 +101,7 @@ Cada uno es una entidad con `poi` (id, tipo, nombre, radio y rango). `ProximityS
 |---|---|
 | Mapa | WASD / flechas volar, ENTER entrar a la corte (junto al planeta del día) |
 | Estación | ↑ ↓ elegir, ENTER hacer la acción |
-| Colección | flechas mover, ENTER ir al mapa / volver |
+| Colección | ↑ ↓ mover, ← → cerrar/abrir carpeta, ENTER ir al mapa / volver |
 | Corte | ← → elegir carta, ENTER jugarla; al terminar ENTER día siguiente, R reintentar |
 | Global | ESC salir |
 
@@ -128,7 +131,7 @@ Escena [`MapScene`](src/scenes/MapScene.lua) · datos [`map.lua`](src/data/map.l
 ```
 main.lua                    bootstrap: registra escenas y reenvía callbacks
 src/Game.lua                escenas, cambio diferido (switchRequest), keyPressed como evento
-src/ecs/                    Registry + Scene (engine del curso)
+src/ecs/                    Registry + Scene (ECS propio)
 src/scenes/                 Menu, Prep, Collection, Map, Negotiation
 src/systems/                un archivo por system
 src/state/                  RunState (estado compartido, solo datos)
@@ -137,6 +140,6 @@ src/world/                  TileGrid, Collision y Movement (lógica pura del map
 src/cards/                  CardEffect (regla pura) y CardRenderer (dibujo)
 src/graphics/               Panel
 src/data/                   paleta, delegaciones, mapa, acciones, cartas, reglas
-src/debug/ lib/             debug overlay del curso (inspector del registry)
+src/debug/                  debug overlay propio (inspector del registry, escenas, pausa)
 tests/                      pruebas en Lua puro
 ```

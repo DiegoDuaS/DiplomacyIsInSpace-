@@ -1,28 +1,26 @@
--- Draws the frame around the collection: title, count, page, new-pack banner and key help.
+-- Top bar of the collection screen (title, pack banner, card count) and the key help at the bottom.
 
 local Screen = require("src.Screen")
 local palette = require("src.data.palette")
 local Panel = require("src.graphics.Panel")
 
-local CollectionChromeRenderSystem = { name = "collectionChromeRender" }
+local CollectionHeaderRenderSystem = { name = "collectionHeaderRender" }
 
 local titleFont, smallFont
 
-function CollectionChromeRenderSystem.setup(scene)
+function CollectionHeaderRenderSystem.setup(scene)
     titleFont = love.graphics.newFont(18, "mono")
     smallFont = love.graphics.newFont(11, "mono")
 end
 
-function CollectionChromeRenderSystem.unload(scene)
+function CollectionHeaderRenderSystem.unload(scene)
     titleFont, smallFont = nil, nil
 end
 
-function CollectionChromeRenderSystem.draw(scene)
+function CollectionHeaderRenderSystem.draw(scene)
     local registry = scene.registry
-    local view = registry:resource("collectionView")
     local pack = registry:resource("pack")
-    local collection = registry:resource("runState").collection
-    local pageCount = math.max(1, math.ceil(#collection / view.pageSize))
+    local total = #registry:resource("runState").collection
 
     Panel.draw(12, 10, Screen.w - 24, 38)
     love.graphics.setFont(titleFont)
@@ -36,15 +34,13 @@ function CollectionChromeRenderSystem.draw(scene)
             230, 22, 200, "center")
     end
     love.graphics.setColor(palette.cream)
-    love.graphics.printf(("%d CARDS   PAGE %d/%d"):format(#collection, view.page, pageCount),
-        Screen.w - 240, 22, 210, "right")
+    love.graphics.printf(("%d CARDS"):format(total), Screen.w - 140, 22, 112, "right")
 
     love.graphics.setColor(palette.grey)
-    love.graphics.printf(
-        pack.acquiring and "ARROWS browse    ENTER fly to the delegation"
-            or "ARROWS browse    ENTER / BACKSPACE back to the station",
-        0, Screen.h - 26, Screen.w, "center")
+    local help = "UP/DOWN browse   LEFT/RIGHT close/open folder   "
+        .. (pack.acquiring and "ENTER fly to the delegation" or "ENTER back to the station")
+    love.graphics.printf(help, 0, Screen.h - 22, Screen.w, "center")
     love.graphics.setColor(1, 1, 1)
 end
 
-return CollectionChromeRenderSystem
+return CollectionHeaderRenderSystem

@@ -1,56 +1,53 @@
--- A rectangular grid of terrain: a width, a height and a flat array of cells. No LÖVE, no registry.
--- x grows right, y grows down, both 1-based. A cell is any terrain value (a string like "asteroid")
--- or nil for empty; reading outside the grid returns nil.
+-- A rectangular grid of terrain values, kept as rows. Pure: no LÖVE, no registry.
+-- x grows right, y grows down, both 1-based. nil means empty; reading outside returns nil.
 
 local TileGrid = {}
 TileGrid.__index = TileGrid
 
 function TileGrid.new(width, height)
-    return setmetatable({
-        width = width,
-        height = height,
-        cells = {}, -- flat [y*width + x] store; nil == empty
-    }, TileGrid)
+    local self = setmetatable({ width = width, height = height }, TileGrid)
+    self:clear()
+    return self
 end
 
 function TileGrid:inBounds(x, y)
-    return x >= 1 and x <= self.width and y >= 1 and y <= self.height
+    return x >= 1 and y >= 1 and x <= self.width and y <= self.height
 end
 
 function TileGrid:get(x, y)
-    if not self:inBounds(x, y) then
-        return nil
+    if self:inBounds(x, y) then
+        return self.rows[y][x]
     end
-    return self.cells[(y - 1) * self.width + x]
 end
 
 function TileGrid:set(x, y, terrain)
-    if not self:inBounds(x, y) then
-        return
+    if self:inBounds(x, y) then
+        self.rows[y][x] = terrain
     end
-    self.cells[(y - 1) * self.width + x] = terrain
 end
 
 function TileGrid:clear()
-    self.cells = {}
+    self.rows = {}
+    for y = 1, self.height do
+        self.rows[y] = {}
+    end
 end
 
--- Every (x, y, terrain) that is non-empty, in a stable row-major order.
--- Render systems use it to skip the empty air and touch only real tiles.
+-- Iterates every non-empty cell as (x, y, terrain), row by row.
 function TileGrid:each()
-    local i = 0
-    local total = self.width * self.height
+    local x, y = 0, 1
     return function()
-        while i < total do
-            i = i + 1
-            local x = (i - 1) % self.width + 1
-            local y = math.floor((i - 1) / self.width) + 1
-            local terrain = self.cells[i]
-            if terrain ~= nil then
-                return x, y, terrain
+        while y <= self.height do
+            x = x + 1
+            if x > self.width then
+                x, y = 0, y + 1
+            else
+                local terrain = self.rows[y][x]
+                if terrain ~= nil then
+                    return x, y, terrain
+                end
             end
         end
-        return nil
     end
 end
 
