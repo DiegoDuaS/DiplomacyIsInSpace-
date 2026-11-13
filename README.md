@@ -13,7 +13,7 @@ love . map                # directo al mapa
 
 # Entrega 3 — Escena de mapa y exploración
 
-Esta entrega agrega el mapa al ciclo del día y, con él, aparece lo visual que faltaba: el fondo de estrellas, los planetas y el retrato del delegado en la corte. Sigue en la paleta de grises con un acento ámbar; todo son formas planas hasta que haya assets.
+Esta entrega agrega el mapa al ciclo del día.
 
 ## El ciclo del día
 
