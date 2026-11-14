@@ -16,7 +16,6 @@ Con `--debug` aparece un panel sobre el juego: **F1** mostrar/ocultar, **F2/F3**
 
 # Entrega 3 — Escena de mapa y exploración
 
-Esta entrega agrega el mapa al ciclo del día.
 
 ## El ciclo del día
 
@@ -94,18 +93,6 @@ Cada uno es una entidad con `poi` (id, tipo, nombre, radio y rango). `ProximityS
 | La corte, entrando desde el mapa |
 |---|
 | ![corte](docs/img/e3-corte.png) |
-
-## Controles
-
-| Pantalla | Teclas |
-|---|---|
-| Mapa | WASD / flechas volar, ENTER entrar a la corte (junto al planeta del día) |
-| Estación | ↑ ↓ elegir, ENTER hacer la acción |
-| Colección | ↑ ↓ mover, ← → cerrar/abrir carpeta, ENTER ir al mapa / volver |
-| Corte | ← → elegir carta, ENTER jugarla; al terminar ENTER día siguiente, R reintentar |
-| Global | ESC salir |
-
-> El GIF para el portafolio: `love .` → PLAY → 3 acciones → ENTER en la colección (entra al mapa) → volar a un asteroide y a un planeta cerrado → entrar a la corte del día → jugar hasta el resultado → ENTER (día 2).
 
 ## Pruebas
 
