@@ -12,12 +12,9 @@ love . --debug            # overlay de depuración: inspector del registry, camb
 
 Con `--debug` aparece un panel sobre el juego: **F1** mostrar/ocultar, **F2/F3** escena, **F4/F5** entidad, **F6/F7** componente, **RePág/AvPág** campo, **-/=** editar el valor, **;/'** elegir y apagar un system, **F9** pausa, **F10** un frame.
 
-
 ---
 
 # Entrega 1 — Sistemas de UI
-
-Esta primera entrega es deliberadamente básica: **texto y rectángulos sobre fondo negro**. Todavía no hay nombres de cartas ni de delegados, ni fondo, ni figuras; eso llega en las siguientes entregas.
 
 ## Los 3 sistemas de UI
 
