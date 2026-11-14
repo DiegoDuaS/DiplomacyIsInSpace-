@@ -123,19 +123,6 @@ No guarda imágenes, funciones, systems, escenas ni objetos gráficos ([`tests/r
 
 Separación lógica / datos / presentación: la regla de cartas (`CardGenerator`, `CardEffect`) es pura y no conoce la UI; los datos están en `src/data/`; los render systems solo leen. El input nunca genera cartas ni cambia de escena: solo emite eventos. Cada system implementa únicamente los hooks que usa.
 
-## Controles
-
-| Pantalla | Teclas |
-|---|---|
-| Estación | ↑ ↓ elegir, ENTER hacer la acción |
-| Colección | ↑ ↓ mover, ← → cerrar/abrir carpeta, HOME / END, ENTER (ir a la corte) o ENTER / BACKSPACE (volver) |
-| Corte | ← → elegir carta, ENTER jugarla; al terminar ENTER día siguiente, R reintentar |
-| Global | ESC salir |
-
-> El GIF para el portafolio: `love .` → PLAY → 3 acciones → paquete → ENTER (corte) → jugar cartas hasta el resultado → ENTER (día 2) → VIEW COLLECTION.
-
----
-
 # Entrega 1 — Sistemas de UI (resumen)
 
 Menú principal, HUD de negociación (paciencia / hostilidad) y mano de cartas, con Setup → Update → Render cada uno. En esta rama la negociación es la corte del ciclo de días. Detalle en el README de la Entrega 1 y capturas en `docs/img/e1-*.png`.
