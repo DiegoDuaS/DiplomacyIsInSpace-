@@ -10,6 +10,7 @@ function love.load(args)
     Game.registerScene("collection", require("src.scenes.CollectionScene"))
     Game.registerScene("map", require("src.scenes.MapScene"))
     Game.registerScene("negotiation", require("src.scenes.NegotiationScene"))
+    Game.registerScene("ending", require("src.scenes.EndingScene"))
 
     local known, startScene = {}, "menu"
     for _, name in ipairs(Game.sceneNames()) do

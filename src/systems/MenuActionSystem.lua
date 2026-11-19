@@ -10,7 +10,11 @@ function MenuActionSystem.update(scene, dt)
     local _, menu = registry:first("menu")
 
     for _, pick in registry:each("menuPicked") do
-        if pick.id == "play" then
+        if pick.id == "continue" then
+            local option = menu.options[menu.cursor]
+            RunState.set(option.save) -- the run that was read from disk when the menu opened
+            registry:spawn({ switchRequest = { to = "prep" } })
+        elseif pick.id == "play" then
             RunState.reset() -- PLAY always starts a new run
             registry:spawn({ switchRequest = { to = "prep" } })
         elseif pick.id == "credits" then
