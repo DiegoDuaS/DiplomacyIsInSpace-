@@ -3,6 +3,8 @@
 local Screen = require("src.Screen")
 local palette = require("src.data.palette")
 local CardRenderer = require("src.cards.CardRenderer")
+local intents = require("src.data.intents")
+local Fonts = require("src.graphics.Fonts")
 
 local HandRenderSystem = { name = "handRender" }
 
@@ -12,7 +14,7 @@ local LIFT = 14
 local hintFont
 
 function HandRenderSystem.setup(scene)
-    hintFont = love.graphics.newFont(11, "mono")
+    hintFont = Fonts.new(11)
 end
 
 function HandRenderSystem.unload(scene)
@@ -21,7 +23,9 @@ end
 
 function HandRenderSystem.draw(scene)
     local registry = scene.registry
-    local over = registry:resource("negotiation").outcome ~= nil
+    local neg = registry:resource("negotiation")
+    local over = neg.outcome ~= nil
+    local counter = neg.intent and intents[neg.intent.id].counter -- the kind that softens the next hit
 
     for _, pos, hand in registry:each("position", "hand") do
         local count = #hand.cards
@@ -33,6 +37,14 @@ function HandRenderSystem.draw(scene)
             local y = selected and pos.y - LIFT or pos.y
 
             CardRenderer.draw(card, x, y)
+
+            if counter and card.kind == counter and not over then
+                love.graphics.setFont(hintFont)
+                love.graphics.setColor(palette.amber)
+                love.graphics.rectangle("fill", x + CardRenderer.W / 2 - 31, y - 13, 62, 13, 3, 3)
+                love.graphics.setColor(palette.ink)
+                love.graphics.printf("COUNTER", x, y - 12, CardRenderer.W, "center")
+            end
 
             if selected then
                 love.graphics.setColor(palette.amber)
@@ -48,9 +60,13 @@ function HandRenderSystem.draw(scene)
     end
 
     if not over then
+        local text = "LEFT/RIGHT choose a card    ENTER play it"
+        local width = hintFont:getWidth(text) + 20
         love.graphics.setFont(hintFont)
-        love.graphics.setColor(palette.grey)
-        love.graphics.printf("LEFT/RIGHT choose a card    ENTER play it", 0, 206, Screen.w, "center")
+        love.graphics.setColor(palette.void[1], palette.void[2], palette.void[3], 0.75)
+        love.graphics.rectangle("fill", (Screen.w - width) / 2, 384, width, 15, 4, 4)
+        love.graphics.setColor(palette.silver)
+        love.graphics.printf(text, 0, 386, Screen.w, "center")
     end
     love.graphics.setColor(1, 1, 1)
 end

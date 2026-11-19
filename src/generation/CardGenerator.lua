@@ -48,11 +48,13 @@ function CardGenerator.card(stats, random)
 
     local kind = weightedKind(weights, total, random)
     local pool = names[kind]
-    return {
+    local card = {
         kind = kind,
         name = pool[random(1, #pool)],
         power = rollPower(stats[kind], random),
     }
+    if random() < rules.riskyChance then card.risky = true end -- rolled last: the rest stays as it was
+    return card
 end
 
 function CardGenerator.pack(stats, count, random)

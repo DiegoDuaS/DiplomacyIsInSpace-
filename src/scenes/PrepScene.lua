@@ -12,7 +12,9 @@ local PrepNavigationSystem = require("src.systems.PrepNavigationSystem")
 local FeedbackSystem = require("src.systems.FeedbackSystem")
 local TextboxSystem = require("src.systems.TextboxSystem")
 local ProgressionGateSystem = require("src.systems.ProgressionGateSystem")
-local StarfieldRenderSystem = require("src.systems.StarfieldRenderSystem")
+local AutosaveSystem = require("src.systems.AutosaveSystem")
+local BackgroundRenderSystem = require("src.systems.BackgroundRenderSystem")
+local Campaign = require("src.state.Campaign")
 local DayRenderSystem = require("src.systems.DayRenderSystem")
 local StatsRenderSystem = require("src.systems.StatsRenderSystem")
 local ActionMenuRenderSystem = require("src.systems.ActionMenuRenderSystem")
@@ -45,13 +47,17 @@ return function(payload)
         menu = { options = options, cursor = 1, spacing = 38, active = true },
     })
 
+    -- what the delegation of the day remembers of the last meeting, if it went badly
+    local grudge = Campaign.startingMeters(aliens.ofDay(runState.day), runState.history, runState.day).note
+
     -- the feedback box: pure output, written by FeedbackSystem
     scene.registry:spawn({
         position = { x = 12, y = 304 },
         size = { w = 616, h = 84 },
         textbox = {
-            text = ("Day %d. The %s delegation expects you at the %s. Train, then prepare your case."):format(
-                runState.day, aliens.ofDay(runState.day).name, aliens.ofDay(runState.day).court),
+            text = ("Day %d. The %s delegation expects you at the %s. Train, then prepare your case.%s"):format(
+                runState.day, aliens.ofDay(runState.day).name, aliens.ofDay(runState.day).court,
+                grudge and ("  " .. grudge) or ""),
             visibleChars = 0,
             speed = 60, -- characters per second
         },
@@ -59,11 +65,12 @@ return function(payload)
 
     scene:addSystem(MenuInputSystem)
     scene:addSystem(ActionSystem)
+    scene:addSystem(AutosaveSystem)
     scene:addSystem(PrepNavigationSystem)
     scene:addSystem(FeedbackSystem)
     scene:addSystem(TextboxSystem)
     scene:addSystem(ProgressionGateSystem)
-    scene:addSystem(StarfieldRenderSystem)
+    scene:addSystem(BackgroundRenderSystem.new(function() return "bg_station" end))
     scene:addSystem(DayRenderSystem)
     scene:addSystem(StatsRenderSystem)
     scene:addSystem(ActionMenuRenderSystem)

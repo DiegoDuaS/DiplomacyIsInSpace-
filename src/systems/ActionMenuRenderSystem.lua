@@ -2,15 +2,17 @@
 
 local palette = require("src.data.palette")
 local Panel = require("src.graphics.Panel")
+local Sprites = require("src.graphics.Sprites")
+local Fonts = require("src.graphics.Fonts")
 
 local ActionMenuRenderSystem = { name = "actionMenuRender" }
 
 local titleFont, labelFont, hintFont
 
 function ActionMenuRenderSystem.setup(scene)
-    titleFont = love.graphics.newFont(12, "mono")
-    labelFont = love.graphics.newFont(13, "mono")
-    hintFont = love.graphics.newFont(12, "mono")
+    titleFont = Fonts.new(12)
+    labelFont = Fonts.new(13)
+    hintFont = Fonts.new(12)
 end
 
 function ActionMenuRenderSystem.unload(scene)
@@ -35,7 +37,10 @@ function ActionMenuRenderSystem.draw(scene)
             if selected then
                 love.graphics.setColor(palette.dusk)
                 love.graphics.rectangle("fill", pos.x + 10, ry, size.w - 20, menu.spacing - 6, 3, 3)
-                if math.sin(love.timer.getTime() * 7) > -0.3 then
+                if Sprites.draw("ui_cursor", Sprites.frameAt("ui_cursor", love.timer.getTime()),
+                        pos.x + 14, ry + 7, { sx = 2 }) then
+                    -- drawn by the sprite
+                elseif math.sin(love.timer.getTime() * 7) > -0.3 then
                     love.graphics.setColor(palette.amber)
                     love.graphics.rectangle("fill", pos.x + 16, ry + 11, 8, 8)
                 end
@@ -43,7 +48,7 @@ function ActionMenuRenderSystem.draw(scene)
 
             love.graphics.setFont(labelFont)
             love.graphics.setColor(dim and palette.slate or palette.cream)
-            love.graphics.print(option.label, pos.x + 34, ry + 8)
+            love.graphics.print(option.label, pos.x + 42, ry + 8)
 
             love.graphics.setFont(hintFont)
             love.graphics.setColor(dim and palette.slate or palette[option.color])

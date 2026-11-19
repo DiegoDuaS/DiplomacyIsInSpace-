@@ -1,9 +1,8 @@
 -- Bootstrap only: register scenes, start one, forward the LÖVE callbacks to the Game.
--- `love . <scene>` starts on that scene; `--debug` opens the editor.
+-- `love . <scene>` starts on that scene; `--debug` opens the debug overlay.
 
 local Game = require("src.Game")
 local DebugOverlay = require("src.debug.DebugOverlay")
-local attachDebugOverlay = require("src.debug.attach")
 
 function love.load(args)
     Game.registerScene("menu", require("src.scenes.MenuScene"))
@@ -11,6 +10,7 @@ function love.load(args)
     Game.registerScene("collection", require("src.scenes.CollectionScene"))
     Game.registerScene("map", require("src.scenes.MapScene"))
     Game.registerScene("negotiation", require("src.scenes.NegotiationScene"))
+    Game.registerScene("ending", require("src.scenes.EndingScene"))
 
     local known, startScene = {}, "menu"
     for _, name in ipairs(Game.sceneNames()) do
@@ -21,10 +21,10 @@ function love.load(args)
     end
     Game.start(startScene)
 
-    attachDebugOverlay(Game)
+    DebugOverlay.install()
     for _, arg in ipairs(args) do
         if arg == "--debug" then
-            DebugOverlay.enterEditor()
+            DebugOverlay.show()
         end
     end
 end

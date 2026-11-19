@@ -4,15 +4,19 @@ local palette = require("src.data.palette")
 local aliens = require("src.data.aliens")
 local rules = require("src.data.progression_rules")
 local Panel = require("src.graphics.Panel")
+local Campaign = require("src.state.Campaign")
+local campaign = require("src.data.campaign")
+local Sprites = require("src.graphics.Sprites")
+local Fonts = require("src.graphics.Fonts")
 
 local DayRenderSystem = { name = "dayRender" }
 
 local dayFont, nameFont, smallFont
 
 function DayRenderSystem.setup(scene)
-    dayFont = love.graphics.newFont(28, "mono")
-    nameFont = love.graphics.newFont(14, "mono")
-    smallFont = love.graphics.newFont(11, "mono")
+    dayFont = Fonts.new(28)
+    nameFont = Fonts.new(14)
+    smallFont = Fonts.new(11)
 end
 
 function DayRenderSystem.unload(scene)
@@ -29,6 +33,10 @@ function DayRenderSystem.draw(scene)
     love.graphics.setFont(dayFont)
     love.graphics.setColor(palette.amber)
     love.graphics.print(("DAY %d"):format(runState.day), x + 18, y + 16)
+    love.graphics.setFont(smallFont)
+    love.graphics.setColor(palette.grey)
+    love.graphics.print(("OF %d"):format(campaign.days), x + 112, y + 18)
+    love.graphics.print(("CYCLE %d/%d"):format(Campaign.cycleOf(runState.day), Campaign.cycles()), x + 112, y + 32)
 
     love.graphics.setFont(nameFont)
     love.graphics.setColor(palette.cream)
@@ -42,8 +50,10 @@ function DayRenderSystem.draw(scene)
     love.graphics.setColor(palette.cream)
     love.graphics.print("TIME SLOTS", x + 470, y + 14)
     for i = 1, rules.actionsPerDay do
-        local px = x + 470 + (i - 1) * 24
-        if i <= runState.actionsLeft then
+        local px = x + 470 + (i - 1) * 28
+        if Sprites.draw("ui_slot", i <= runState.actionsLeft and 1 or 2, px, y + 32, { sx = 2 }) then
+            -- drawn by the sprite: free, or spent
+        elseif i <= runState.actionsLeft then
             love.graphics.setColor(palette.silver)
             love.graphics.rectangle("fill", px, y + 34, 18, 18)
         else

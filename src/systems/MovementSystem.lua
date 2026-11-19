@@ -8,16 +8,11 @@ function MovementSystem.update(scene, dt)
     local registry = scene.registry
     local map = registry:resource("map")
 
-    for _, pos, intent, velocity in
-        registry:each("position", "moveIntent", "velocity") do
+    for _, pos, intent, velocity in registry:each("position", "moveIntent", "velocity") do
+        local dirX, dirY = Movement.direction(intent.dx, intent.dy, map.normalize)
 
-        local vx, vy = Movement.direction(intent.dx, intent.dy, map.normalize)
-
-        -- speed is authored in px/sec: independent of the frame rate
-        velocity.x = vx * map.speed
-        velocity.y = vy * map.speed
-        pos.x = pos.x + velocity.x * dt
-        pos.y = pos.y + velocity.y * dt
+        velocity.x, velocity.y = dirX * map.speed, dirY * map.speed
+        pos.x, pos.y = pos.x + velocity.x * dt, pos.y + velocity.y * dt
     end
 end
 

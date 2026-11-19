@@ -4,15 +4,17 @@ local palette = require("src.data.palette")
 local kinds = require("src.data.card_kinds")
 local rules = require("src.data.progression_rules")
 local Panel = require("src.graphics.Panel")
+local Sprites = require("src.graphics.Sprites")
+local Fonts = require("src.graphics.Fonts")
 
 local StatsRenderSystem = { name = "statsRender" }
 
 local titleFont, labelFont, valueFont
 
 function StatsRenderSystem.setup(scene)
-    titleFont = love.graphics.newFont(12, "mono")
-    labelFont = love.graphics.newFont(12, "mono")
-    valueFont = love.graphics.newFont(16, "mono")
+    titleFont = Fonts.new(12)
+    labelFont = Fonts.new(12)
+    valueFont = Fonts.new(16)
 end
 
 function StatsRenderSystem.unload(scene)
@@ -34,7 +36,9 @@ function StatsRenderSystem.draw(scene)
 
         love.graphics.setFont(labelFont)
         love.graphics.setColor(palette.cream)
-        love.graphics.print(kinds[kind].label, x + 16, ry)
+        local textX = x + 16
+        if Sprites.draw("ui_icon_skill", i, x + 16, ry - 2, { color = color }) then textX = x + 38 end
+        love.graphics.print(kinds[kind].label, textX, ry)
 
         local barW = 160
         love.graphics.setColor(palette.ink)

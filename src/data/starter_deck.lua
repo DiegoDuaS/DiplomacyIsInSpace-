@@ -5,9 +5,9 @@ return {
     { kind = "logic",   name = "Trade Figures",     power = 3 },
     { kind = "resolve", name = "Red Line",          power = 2 },
     { kind = "tact",    name = "Shared Meal",       power = 2 },
-    { kind = "logic",   name = "Treaty Precedent",  power = 4 },
-    { kind = "resolve", name = "Show of Force",     power = 3 },
-    { kind = "tact",    name = "Gift Exchange",     power = 4 },
+    { kind = "logic",   name = "Treaty Precedent",  power = 4, risky = true },
+    { kind = "resolve", name = "Show of Force",     power = 3, risky = true },
+    { kind = "tact",    name = "Gift Exchange",     power = 4, risky = true },
     { kind = "logic",   name = "Fair Compromise",   power = 2 },
     { kind = "resolve", name = "Final Offer",       power = 2 },
 }
