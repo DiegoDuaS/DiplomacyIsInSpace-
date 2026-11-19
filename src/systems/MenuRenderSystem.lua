@@ -3,16 +3,18 @@
 local Screen = require("src.Screen")
 local palette = require("src.data.palette")
 local Panel = require("src.graphics.Panel")
+local Sprites = require("src.graphics.Sprites")
+local Fonts = require("src.graphics.Fonts")
 
 local MenuRenderSystem = { name = "menuRender" }
 
 local titleFont, subtitleFont, itemFont, smallFont
 
 function MenuRenderSystem.setup(scene)
-    titleFont = love.graphics.newFont(46, "mono")
-    subtitleFont = love.graphics.newFont(22, "mono")
-    itemFont = love.graphics.newFont(20, "mono")
-    smallFont = love.graphics.newFont(12, "mono")
+    titleFont = Fonts.new(46)
+    subtitleFont = Fonts.new(22)
+    itemFont = Fonts.new(20)
+    smallFont = Fonts.new(12)
 end
 
 function MenuRenderSystem.unload(scene)
@@ -21,6 +23,7 @@ function MenuRenderSystem.unload(scene)
 end
 
 local function drawTitle()
+    if Sprites.has("bg_menu") then return end -- the title is painted in the backdrop
     love.graphics.setFont(titleFont)
     love.graphics.setColor(palette.cream)
     love.graphics.printf("DIPLOMACY", 0, 34, Screen.w, "center")
@@ -57,10 +60,17 @@ function MenuRenderSystem.draw(scene)
             local selected = i == menu.cursor
             love.graphics.setColor(selected and palette.amber or palette.cream)
             love.graphics.printf(option.label, 0, y, Screen.w, "center")
-            if selected and math.sin(love.timer.getTime() * 7) > -0.3 then
+            if selected then
                 local half = itemFont:getWidth(option.label) / 2
-                love.graphics.rectangle("fill", Screen.w / 2 - half - 26, y + 7, 12, 8)
-                love.graphics.rectangle("fill", Screen.w / 2 + half + 14, y + 7, 12, 8)
+                local frame = Sprites.frameAt("ui_cursor", love.timer.getTime())
+                -- the cursor points right; the one on the right side is mirrored
+                local drawn = Sprites.draw("ui_cursor", frame, Screen.w / 2 - half - 36, y + 2, { sx = 2 })
+                    and Sprites.draw("ui_cursor", frame, Screen.w / 2 + half + 16, y + 2, { sx = -2, sy = 2, ox = 10 })
+                if not drawn and math.sin(love.timer.getTime() * 7) > -0.3 then -- no art: blinking squares
+                    love.graphics.setColor(palette.amber)
+                    love.graphics.rectangle("fill", Screen.w / 2 - half - 26, y + 7, 12, 8)
+                    love.graphics.rectangle("fill", Screen.w / 2 + half + 14, y + 7, 12, 8)
+                end
             end
         end
     end

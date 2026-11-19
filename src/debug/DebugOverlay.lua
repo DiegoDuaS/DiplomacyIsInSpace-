@@ -9,6 +9,7 @@
 
 local Game = require("src.Game")
 local Screen = require("src.Screen")
+local Fonts = require("src.graphics.Fonts")
 
 local DebugOverlay = {}
 
@@ -135,7 +136,7 @@ local function handleKey(key)
 end
 
 local function drawPanel(scene)
-    font = font or love.graphics.newFont(10, "mono")
+    font = font or Fonts.new(10)
     love.graphics.setFont(font)
     local x, lineHeight = Screen.w - PANEL_W, 12
     local view = inspect(scene)

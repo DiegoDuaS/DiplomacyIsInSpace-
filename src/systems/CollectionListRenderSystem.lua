@@ -4,6 +4,8 @@ local palette = require("src.data.palette")
 local kinds = require("src.data.card_kinds")
 local Panel = require("src.graphics.Panel")
 local CardEffect = require("src.cards.CardEffect")
+local Sprites = require("src.graphics.Sprites")
+local Fonts = require("src.graphics.Fonts")
 
 local CollectionListRenderSystem = { name = "collectionListRender" }
 
@@ -13,8 +15,8 @@ local ROW_H, ROWS_Y = 18, 64
 local font, boldFont
 
 function CollectionListRenderSystem.setup(scene)
-    font = love.graphics.newFont(11, "mono")
-    boldFont = love.graphics.newFont(12, "mono")
+    font = Fonts.new(11)
+    boldFont = Fonts.new(12)
 end
 
 function CollectionListRenderSystem.unload(scene)
@@ -22,6 +24,7 @@ function CollectionListRenderSystem.unload(scene)
 end
 
 local function drawFolderIcon(x, y, color, open)
+    if Sprites.draw("ui_folder", open and 2 or 1, x, y) then return end
     love.graphics.setColor(color)
     love.graphics.rectangle("fill", x, y + 1, 7, 3) -- the tab
     if open then
@@ -31,7 +34,8 @@ local function drawFolderIcon(x, y, color, open)
     end
 end
 
-local function drawFileIcon(x, y, color)
+local function drawFileIcon(x, y, color, selected)
+    if Sprites.draw("ui_file", selected and 2 or 1, x, y) then return end
     love.graphics.setColor(color)
     love.graphics.polygon("line", x + 0.5, y + 0.5, x + 7.5, y + 0.5, x + 10.5, y + 3.5,
         x + 10.5, y + 13.5, x + 0.5, y + 13.5)
@@ -69,10 +73,10 @@ local function drawFolderRow(row, y, view)
         136, y + 3)
 end
 
-local function drawFileRow(row, y, collection, pack)
+local function drawFileRow(row, y, collection, pack, selected)
     local card = collection[row.card]
 
-    drawFileIcon(58, y + 1, palette.silver)
+    drawFileIcon(58, y + 2, palette.silver, selected)
     love.graphics.setFont(font)
     love.graphics.setColor(palette.cream)
     love.graphics.print(card.name, 78, y + 3)
@@ -82,6 +86,13 @@ local function drawFileRow(row, y, collection, pack)
 
     love.graphics.setColor(palette.silver)
     love.graphics.print(effectText(card), 340, y + 3)
+
+    if card.risky then -- the numbers above are already doubled: say why
+        love.graphics.setColor(palette.red)
+        love.graphics.rectangle("fill", 520, y + 2, 48, 14, 3, 3)
+        love.graphics.setColor(palette.white)
+        love.graphics.printf("RISKY", 520, y + 3, 48, "center")
+    end
 
     if pack.first and row.card >= pack.first and row.card <= pack.last then
         love.graphics.setColor(palette.amber)
@@ -114,7 +125,7 @@ function CollectionListRenderSystem.draw(scene)
         if row.folder then
             drawFolderRow(row, y, view)
         else
-            drawFileRow(row, y, collection, pack)
+            drawFileRow(row, y, collection, pack, view.top + slot == view.cursor)
         end
     end
 

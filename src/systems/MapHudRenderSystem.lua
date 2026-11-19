@@ -4,15 +4,16 @@ local Screen = require("src.Screen")
 local palette = require("src.data.palette")
 local aliens = require("src.data.aliens")
 local Panel = require("src.graphics.Panel")
+local Fonts = require("src.graphics.Fonts")
 
 local MapHudRenderSystem = { name = "mapHudRender" }
 
 local dayFont, titleFont, smallFont
 
 function MapHudRenderSystem.setup(scene)
-    dayFont = love.graphics.newFont(20, "mono")
-    titleFont = love.graphics.newFont(14, "mono")
-    smallFont = love.graphics.newFont(11, "mono")
+    dayFont = Fonts.new(20)
+    titleFont = Fonts.new(14)
+    smallFont = Fonts.new(11)
 end
 
 function MapHudRenderSystem.unload(scene)

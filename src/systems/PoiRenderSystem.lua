@@ -3,18 +3,26 @@
 
 local palette = require("src.data.palette")
 local aliens = require("src.data.aliens")
+local Sprites = require("src.graphics.Sprites")
+local Fonts = require("src.graphics.Fonts")
 
 local PoiRenderSystem = { name = "poiRender" }
 
 local nameFont, smallFont
 
 function PoiRenderSystem.setup(scene)
-    nameFont = love.graphics.newFont(12, "mono")
-    smallFont = love.graphics.newFont(10, "mono")
+    nameFont = Fonts.new(12)
+    smallFont = Fonts.new(10)
 end
 
 function PoiRenderSystem.unload(scene)
     nameFont, smallFont = nil, nil
+end
+
+-- The sprite that paints a place, if its PNG exists: map_station, map_thalassa, map_krag...
+function PoiRenderSystem.spriteOf(poi)
+    local name = "map_" .. (poi.kind == "station" and "station" or poi.id)
+    return Sprites.has(name) and name or nil
 end
 
 function PoiRenderSystem.draw(scene)
@@ -23,6 +31,10 @@ function PoiRenderSystem.draw(scene)
     local today = aliens.ofDay(registry:resource("runState").day)
 
     for _, pos, poi in registry:each("position", "poi") do
+        -- the block as one picture, centred on the place (TilemapRenderSystem skips these cells)
+        local art = PoiRenderSystem.spriteOf(poi)
+        if art then Sprites.draw(art, 1, pos.x, pos.y, { ox = poi.half, oy = poi.half }) end
+
         if map.nearby == poi.id then
             love.graphics.setColor(palette.amber)
             love.graphics.circle("line", pos.x, pos.y, poi.range)

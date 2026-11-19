@@ -3,14 +3,15 @@
 local Screen = require("src.Screen")
 local palette = require("src.data.palette")
 local Panel = require("src.graphics.Panel")
+local Fonts = require("src.graphics.Fonts")
 
 local CollectionHeaderRenderSystem = { name = "collectionHeaderRender" }
 
 local titleFont, smallFont
 
 function CollectionHeaderRenderSystem.setup(scene)
-    titleFont = love.graphics.newFont(18, "mono")
-    smallFont = love.graphics.newFont(11, "mono")
+    titleFont = Fonts.new(18)
+    smallFont = Fonts.new(11)
 end
 
 function CollectionHeaderRenderSystem.unload(scene)

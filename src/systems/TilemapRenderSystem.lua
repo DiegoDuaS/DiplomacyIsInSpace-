@@ -6,6 +6,7 @@
 local palette = require("src.data.palette")
 local aliens = require("src.data.aliens")
 local Screen = require("src.Screen")
+local Sprites = require("src.graphics.Sprites")
 
 local TilemapRenderSystem = { name = "tilemapRender" }
 
@@ -31,6 +32,13 @@ function TilemapRenderSystem.draw(scene)
         local px, py = (x - 1) * cell, (y - 1) * cell
         if px + cell >= camera.x and px <= camera.x + Screen.w
             and py + cell >= camera.y and py <= camera.y + Screen.h then
+            -- asteroids are one of four rocks per cell; a place with a sprite is drawn by PoiRenderSystem
+            if terrain == "asteroid" and Sprites.has("map_asteroids") then
+                Sprites.draw("map_asteroids", (x * 7 + y * 13) % 4 + 1, px, py)
+                goto continue
+            elseif terrain ~= "asteroid" and Sprites.has(terrain == "station" and "map_station" or "map_" .. terrain) then
+                goto continue
+            end
             local fill, edge = colors(terrain, tilemap.pois)
 
             love.graphics.setColor(fill)
@@ -42,6 +50,7 @@ function TilemapRenderSystem.draw(scene)
             if grid:get(x - 1, y) ~= terrain then love.graphics.rectangle("fill", px, py, 1, cell) end
             if grid:get(x + 1, y) ~= terrain then love.graphics.rectangle("fill", px + cell - 1, py, 1, cell) end
         end
+        ::continue::
     end
     love.graphics.setColor(1, 1, 1)
 end

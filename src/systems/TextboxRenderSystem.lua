@@ -2,6 +2,7 @@
 
 local palette = require("src.data.palette")
 local Panel = require("src.graphics.Panel")
+local Fonts = require("src.graphics.Fonts")
 
 local TextboxRenderSystem = { name = "textboxRender" }
 
@@ -10,7 +11,7 @@ local PAD = 16
 local font
 
 function TextboxRenderSystem.setup(scene)
-    font = love.graphics.newFont(14, "mono")
+    font = Fonts.new(14)
 end
 
 function TextboxRenderSystem.unload(scene)

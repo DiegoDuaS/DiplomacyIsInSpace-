@@ -4,6 +4,8 @@ local palette = require("src.data.palette")
 local kinds = require("src.data.card_kinds")
 local Panel = require("src.graphics.Panel")
 local CardEffect = require("src.cards.CardEffect")
+local rules = require("src.data.negotiation_rules")
+local Fonts = require("src.graphics.Fonts")
 
 local CardInspectorRenderSystem = { name = "cardInspectorRender" }
 
@@ -12,10 +14,10 @@ local X, Y, W, H = 12, 268, 616, 104
 local nameFont, bodyFont, numberFont, smallFont
 
 function CardInspectorRenderSystem.setup(scene)
-    nameFont = love.graphics.newFont(16, "mono")
-    bodyFont = love.graphics.newFont(12, "mono")
-    numberFont = love.graphics.newFont(30, "mono")
-    smallFont = love.graphics.newFont(11, "mono")
+    nameFont = Fonts.new(16)
+    bodyFont = Fonts.new(12)
+    numberFont = Fonts.new(30)
+    smallFont = Fonts.new(11)
 end
 
 function CardInspectorRenderSystem.unload(scene)
@@ -72,6 +74,17 @@ local function drawCard(card)
     end
     love.graphics.setColor(palette.silver)
     love.graphics.printf(kind.blurb, X + 330, Y + 58, W - 350, "left")
+    if card.risky then
+        love.graphics.setColor(palette.red)
+        love.graphics.rectangle("fill", X + 250, Y + 68, 56, 16, 3, 3)
+        love.graphics.setFont(smallFont)
+        love.graphics.setColor(palette.white)
+        love.graphics.printf("RISKY", X + 250, Y + 71, 56, "center")
+        love.graphics.setColor(palette.red)
+        love.graphics.print(("%dx effect, but %d%% backfires: +%d hostility"):format(
+            rules.risky.multiplier, rules.risky.backfireChance * 100, rules.risky.backfireHostility),
+            X + 330, Y + 88)
+    end
 end
 
 function CardInspectorRenderSystem.draw(scene)
