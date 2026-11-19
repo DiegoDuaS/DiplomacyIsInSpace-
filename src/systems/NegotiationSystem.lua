@@ -1,14 +1,30 @@
--- The rules of one negotiation: a played card moves the meters, the round ends, the outcome is decided.
+-- Plays the requested card through Round (src/negotiation/Round.lua), which holds the rules:
 -- hostility at max -> war, patience at 0 -> walkout, last round survived -> peace.
 
 local aliens = require("src.data.aliens")
-local rules = require("src.data.negotiation_rules")
+local intents = require("src.data.intents")
 local CardEffect = require("src.cards.CardEffect")
+local Round = require("src.negotiation.Round")
 
 local NegotiationSystem = { name = "negotiation" }
 
-local function clamp(value)
-    return math.max(0, math.min(value, rules.max))
+-- "Warm Greeting: HOSTILITY -3  |  Press: HOSTILITY +2 (softened)"
+local function describe(card, report)
+    local parts = {}
+    for _, line in ipairs(CardEffect.linesOf(report.effect)) do
+        parts[#parts + 1] = line.text
+    end
+    local text = card.name .. ": " .. (report.backfired and "BACKFIRED! " or "") .. table.concat(parts, ", ")
+
+    local hit, meters = report.hit, {}
+    for _, meter in ipairs({ "patience", "hostility" }) do
+        if hit[meter] ~= 0 then meters[#meters + 1] = ("%s %+d"):format(meter:upper(), hit[meter]) end
+    end
+    if #meters > 0 then
+        text = text .. "   |   " .. intents[hit.id].label .. ": " .. table.concat(meters, ", ")
+            .. (hit.countered and " (softened)" or "")
+    end
+    return text
 end
 
 function NegotiationSystem.update(scene, dt)
@@ -19,32 +35,14 @@ function NegotiationSystem.update(scene, dt)
     for _, request in registry:each("cardPlayRequested") do
         local _, hand = registry:first("hand")
         local card = hand.cards[request.slot]
-        local effect = CardEffect.of(card)
         local before = { patience = neg.patience, hostility = neg.hostility }
 
-        neg.patience = clamp(neg.patience + effect.patience)
-        neg.hostility = clamp(neg.hostility + effect.hostility)
-        local parts = {}
-        for _, line in ipairs(CardEffect.lines(card)) do
-            parts[#parts + 1] = line.text
-        end
-        neg.message = card.name .. ": " .. table.concat(parts, ", ")
+        local report = Round.play(neg, alien, card)
+        neg.message = describe(card, report)
+        neg.lastHit = report.hit
 
         hand.cards[request.slot] = hand.deck[hand.deckIndex]
         hand.deckIndex = hand.deckIndex % #hand.deck + 1
-
-        -- the round ends: the alien grows tired and touchier
-        neg.patience = clamp(neg.patience - rules.patienceDrain)
-        neg.hostility = clamp(neg.hostility + alien.temper)
-        neg.round = neg.round + 1
-
-        if neg.hostility >= rules.max then
-            neg.outcome = "war"
-        elseif neg.patience <= 0 then
-            neg.outcome = "walkout"
-        elseif neg.round > rules.rounds then
-            neg.outcome = "peace"
-        end
 
         registry:spawn({
             event = true,
